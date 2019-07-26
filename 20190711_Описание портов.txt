@@ -1,0 +1,270 @@
+{
+  "messageMapId": "configure-device",
+  "deviceId": "<hash>",
+  "companyId": "1",
+  "inputs": {
+	"AC_ANALOG_INPUT-PHASE_A_CURRENT": {
+      "input": "PHASE_A_CURRENT",
+      "type": "AC_ANALOG_INPUT",
+      "name": "Ток по фазе А",
+      "measureUnit": "А",
+      "measurableValue": "current",
+      "sensorModel": "Talema AC1015 + 25 Ohm",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 10,
+          "min": 0
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 10,
+          "min": 0
+        },
+        {
+          "statusCode": "INFO",
+          "max": 10,
+          "min": 0
+        }
+      ]
+    }
+	
+	"AC_ANALOG_INPUT-PHASE_B_CURRENT": {
+      "input": "PHASE_B_CURRENT",
+      "type": "AC_ANALOG_INPUT",
+      "name": "Ток по фазе B",
+      "measureUnit": "А",
+      "measurableValue": "current",
+      "sensorModel": "Talema AC1015 + 25 Ohm",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 10,
+          "min": 0
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 10,
+          "min": 0
+        },
+        {
+          "statusCode": "INFO",
+          "max": 10,
+          "min": 0
+        }
+      ]
+    }
+	
+	"AC_ANALOG_INPUT-PHASE_C_CURRENT": {
+      "input": "PHASE_C_CURRENT",
+      "type": "AC_ANALOG_INPUT",
+      "name": "Ток по фазе C",
+      "measureUnit": "А",
+      "measurableValue": "current",
+      "sensorModel": "Talema AC1015 + 25 Ohm",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 10,
+          "min": 0
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 10,
+          "min": 0
+        },
+        {
+          "statusCode": "INFO",
+          "max": 10,
+          "min": 0
+        }
+      ]
+    }
+	
+	"AC_ANALOG_INPUT-PHASE_A_VOLTAGE": {
+      "input": "PHASE_A_VOLTAGE",
+      "type": "AC_ANALOG_INPUT",
+      "name": "Напряжение по фазе А",
+      "measureUnit": "В",
+      "measurableValue": "voltage",
+      "sensorModel": "No name transformer 1:314",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 400,
+          "min": 0
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 400,
+          "min": 0
+        },
+        {
+          "statusCode": "INFO",
+          "max": 400,
+          "min": 0
+        }
+      ]
+    }
+	
+	
+	"AC_ANALOG_INPUT-PHASE_B_VOLTAGE": {
+      "input": "PHASE_B_VOLTAGE",
+      "type": "AC_ANALOG_INPUT",
+      "name": "Напряжение по фазе B",
+      "measureUnit": "В",
+      "measurableValue": "voltage",
+      "sensorModel": "No name transformer 1:314",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 400,
+          "min": 0
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 400,
+          "min": 0
+        },
+        {
+          "statusCode": "INFO",
+          "max": 400,
+          "min": 0
+        }
+      ]
+    }
+
+	"AC_ANALOG_INPUT-PHASE_C_VOLTAGE": {
+      "input": "PHASE_C_VOLTAGE",
+      "type": "AC_ANALOG_INPUT",
+      "name": "Напряжение по фазе C",
+      "measureUnit": "В",
+      "measurableValue": "voltage",
+      "sensorModel": "No name transformer 1:314",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 400,
+          "min": 0
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 400,
+          "min": 0
+        },
+        {
+          "statusCode": "INFO",
+          "max": 400,
+          "min": 0
+        }
+      ]
+    }	
+  
+  
+  
+    "DC_ANALOG_INPUT-AIN0": {
+      "input": "AIN0",
+      "type": "DC_ANALOG_INPUT",
+      "name": "На столе",
+      "measureUnit": "С",
+      "measurableValue": "temperature",
+      "sensorModel": "LM35DT",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 0.45,
+          "min": 0.01
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 0.3,
+          "min": 0.1
+        },
+        {
+          "statusCode": "INFO",
+          "max": 1.5,
+          "min": 0
+        }
+      ]
+    }
+	
+	
+	"DC_ANALOG_INPUT-AIN1": {
+      "input": "AIN1",
+      "type": "DC_ANALOG_INPUT",
+      "name": "На кондиционере",
+      "measureUnit": "С",
+      "measurableValue": "temperature",
+      "sensorModel": "LM35DZ",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 0.45,
+          "min": 0.01
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 0.3,
+          "min": 0.1
+        },
+        {
+          "statusCode": "INFO",
+          "max": 1.25,
+          "min": 0
+        }
+      ]
+    }
+	
+	"DC_ANALOG_INPUT-AIN3": {
+      "input": "AIN3",
+      "type": "DC_ANALOG_INPUT",
+      "name": "Vacant",
+      "measureUnit": "С",
+      "measurableValue": "Vacant",
+      "sensorModel": "Vacant",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 3,
+          "min": 0.01
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 3,
+          "min": 0.01
+        },
+        {
+          "statusCode": "INFO",
+          "max": 3,
+          "min": 0.1
+        }
+      ]
+    }
+	
+	"DC_ANALOG_INPUT-AIN4": {
+      "input": "AIN4",
+      "type": "DC_ANALOG_INPUT",
+      "name": "На улице",
+      "measureUnit": "С",
+      "measurableValue": "temperature",
+      "sensorModel": "LM35DZ",
+      "statusRange": [
+        {
+          "statusCode": "ERROR",
+          "max": 0.45,
+          "min": 0.01
+        },
+        {
+          "statusCode": "WARNING",
+          "max": 0.26,
+          "min": 0
+        },
+        {
+          "statusCode": "INFO",
+          "max": 1.25,
+          "min": 0
+        }
+      ]
+    }
+  }
+}
