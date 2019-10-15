@@ -605,6 +605,15 @@ ESP_Error_t SendCmd(const char * cmd)
 	UART2_Send((uint8_t *)cmd, length);
 	return ESP_WaitResponse();
 }
+
+ESP_Error_t SendBin(uint8_t *Buf, uint32_t Length)
+{
+	UART2_Send((uint8_t *)Buf, Length);
+	//return ESP_WaitResponse();
+        return ESP_RESPONSE_OK;
+}
+
+
 ESP_Error_t SendCmdEx(const char * cmd, int timeout)
 {
 	int length = strlen(cmd);
@@ -687,10 +696,10 @@ bool ESP_Reset()
 			SendCmd_cb("AT+GMR\r\n", ATGMR_Response);
 			SendCmd("AT+CWMODE=1\r\n");
 			HAL_Delay(200);
-			SendCmd("AT+CIPMUX=1\r\n");
-			SendCmd("AT+CIPDINFO=1\r\n");
-			SendCmd("AT+CWAUTOCONN=0\r\n");
-			SendCmd("AT+CWDHCP=1,1\r\n");
+//			SendCmd("AT+CIPMUX=0\r\n");
+//			SendCmd("AT+CIPDINFO=1\r\n");
+//			SendCmd("AT+CWAUTOCONN=0\r\n");
+//			SendCmd("AT+CWDHCP=1,1\r\n");
 			HAL_Delay(200);
 			return true;
 		}
@@ -876,46 +885,55 @@ bool ESP_Init()
 				{
 					set230 = false;
 					DEBUG("SET 230400\n");
-					if (SendCmd("AT+UART_CUR=230400,1,0,0\r\n") == ESP_RESPONSE_OK)
+					if (SendCmd("AT+UART_CUR=230400,8,1,0,0\r\n") == ESP_RESPONSE_OK)
 					{
-						UART2_SetBaudrate();
+                                                UART2_SetBaudrate();
+                                                DEBUG("UART2 Init 230400\n");
 						retries = 5;
 						while (retries != 0)
 						{
 							if (SendCmd("AT\r\n") == ESP_RESPONSE_OK)
 								break;
+                                                        DEBUG("ESP not respond 230400\n");
 							--retries;
 							HAL_Delay(1000);
 						}
 						if (retries == 0)
 						{
 							UART2_ReInit();
+                                                        DEBUG("UART2 Init 115200\n");
 							retries = 5;
 							continue;
 						}
+                                                DEBUG("ESP Speed 230400\n");
 					}
 				}
 				
+                                SendCmdEx("AT+CIPDNS_CUR=1,\"208.67.222.222\"\r\n", 10000);
 				ESP_Status();
 				// Station
 				while (ESP_StatusInt != 2 && ESP_StatusInt != 3 && ESP_StatusInt != 4)
 				{
 					printf("Connect to Access Point\n");
-					if (ESP_Connect() == true) __LED_NET(1), R.WiFi_Connected = true;
-                                        else __LED_NET(0), R.WiFi_Connected = false;
-                                        
-                                        
-                                        SendCmdEx("AT+CIPDNS_CUR=1,\"208.67.222.222\"\r\n", 10000);
-                                        //SendCmdEx("AT+CIPDNS_CUR?\r\n", 20000);
-                                        
-                                        //SendCmd_cb("AT+CIPDOMAIN=\"motor-diag.7bits.it\"\r\n", get_IP);
-                                        
-					HAL_Delay(500);
-					ESP_Status();
+					if (ESP_Connect() == true) {
+                                            __LED_NET(1);
+                                            R.WiFi_Connected = true; 
+                                            return true;
+                                        } 
+                                        else {
+                                            __LED_NET(0);
+                                            R.WiFi_Connected = false;
+                                        }
+                                        HAL_Delay(500);
+                                        ESP_Status();
 				}
 				printf("Station IP:%s\n", ESP_StationIP());
-				if (ESP_CreateServer())
-					return true;
+                                
+                                if (R.WiFi_Connected ) 
+                                                return true;
+//                                if (ESP_CreateServer())
+//						return true;       
+
 
 				// AP
 //				ESP_ConfigAP();
@@ -976,19 +994,3 @@ return false;
 
 
 
-
-
-// Отправить пакет с измерениями
-void ESP_Send_Packet (SEND_TYPE_e Type){
-
-
-  switch (Type) {                                   
-      case NO_SEND:       /*osThreadYield();*/          break;
-      case GET_DEVIDSRV:    get_DevID_from_server();    break;
-      case TXT_FREQ:        txt_freq_send();            break;
-      case TXT_RARE:        txt_rare_send();            break;
-      case BIN_RARE:        bin_rare_send();            break;
-      default:                                          break;
-  }
-
-}

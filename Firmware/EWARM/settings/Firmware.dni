@@ -1,5 +1,5 @@
 [DebugChecksum]
-Checksum=-1745520755
+Checksum=1860822961
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -20,8 +20,6 @@ MixedMode=1
 [struct_types]
 Fmt0=SETTINGS_t-AC_In_Send_Enable	4	0
 Fmt1=SETTINGS_t-CRC32	4	0
-Fmt2=SETTINGS_t-Freq_Send_Interval	4	0
-Fmt3=SETTINGS_t-Slow_Send_Interval	4	0
 [array_types]
 Fmt0=int16_t[1024]	3	0
 Fmt1=int16_t[40960]	3	0

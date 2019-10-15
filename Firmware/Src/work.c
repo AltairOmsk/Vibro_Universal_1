@@ -1,3 +1,8 @@
+/*
+Задача отправки по WiFi постоянно мониторит необходимость отправки.
+Таймеры перезапускается только после отправки.
+
+*/
 //******************************************************************************
 // Секция include: здесь подключается заголовочный файл к модулю
 //******************************************************************************
@@ -47,6 +52,7 @@ LPF2_t          ADC1_Filter[ADC1_CH_CNT];                                       
 // Секция прототипов локальных функций
 //******************************************************************************
 
+
 //******************************************************************************
 // Секция описания функций (сначала глобальных, потом локальных)
 //******************************************************************************
@@ -60,15 +66,15 @@ void bluetooth_init (void){
   
   sprintf(TmpStr, "AT+ROLE0"); 
   //DEBUG(); 
-  //HAL_UART_Transmit(&huart1, (uint8_t*)TmpStr, strlen(TmpStr), 500);  osDelay(100);
+  HAL_UART_Transmit(&huart1, (uint8_t*)TmpStr, strlen(TmpStr), 500);  osDelay(100);
   HAL_Delay(200);
   
   sprintf(TmpStr, "AT+NAMEVIB_%02d%02d", DevID_Dw0&0xFF, (DevID_Dw0>>16)&0xFF);    
-  //HAL_UART_Transmit(&huart1, (uint8_t*)TmpStr, strlen(TmpStr), 500);  osDelay(100);
+  HAL_UART_Transmit(&huart1, (uint8_t*)TmpStr, strlen(TmpStr), 500);  osDelay(100);
   HAL_Delay(500);
   
   sprintf(TmpStr, "AT+RESET");      
-  //HAL_UART_Transmit(&huart1, (uint8_t*)TmpStr, strlen(TmpStr), 500);  osDelay(100);
+  HAL_UART_Transmit(&huart1, (uint8_t*)TmpStr, strlen(TmpStr), 500);  osDelay(100);
   HAL_Delay(10);
 }
 
@@ -180,8 +186,8 @@ void load_default_settings_to_EEPROM (void) {
    
       
       //--------------------------
-      .Freq_Send_Interval       = 0,                                            // Интервал отправки аналоговых входов в секундах
-      .Slow_Send_Interval       = 0,                                            // Интервал отправки микрофонов и акселерометров в секундах
+      .Interval_Send_Freq       = 60,                                           // Интервал отправки аналоговых входов в секундах
+      .Interval_Send_Rare       = 600,                                          // Интервал отправки микрофонов и акселерометров в секундах
   
       .AC_In_Send_Enable        = true,
       .DC_In_Send_Enable        = true,
@@ -343,12 +349,34 @@ uint8_t i;
 }
 
 
+void clear_peak_detector_AC (void) {
+    M.Volt_Phase_A_MAX = 0;
+    M.Volt_Phase_B_MAX = 0;
+    M.Volt_Phase_C_MAX = 0;
+    
+    M.Volt_Phase_A_MIN = 3.402823466e+38;
+    M.Volt_Phase_B_MIN = 3.402823466e+38;
+    M.Volt_Phase_C_MIN = 3.402823466e+38;
+    
+    M.Current_Phase_A_MAX = 0;
+    M.Current_Phase_B_MAX = 0;
+    M.Current_Phase_C_MAX = 0;
+    
+    M.Current_Phase_A_MIN = 3.402823466e+38;
+    M.Current_Phase_B_MIN = 3.402823466e+38;
+    M.Current_Phase_C_MIN = 3.402823466e+38;
+}
 
 
 
 
-
-
+//******************************************************************************
+//   Пиковый детектор
+//******************************************************************************
+void min_max_peak_detect (float *Src, float *Min, float *Max) {
+    if (*Src > *Max) *Max = *Src;
+    if (*Src < *Min) *Min = *Src;
+}
 
 
 //******************************************************************************
@@ -360,14 +388,23 @@ uint8_t i;
 
         if (M.Lock) return;                                                     // Если кто то читает данные, не обновляем
         
-        for (i=0; i<40; i++){
-          M.Volt_Phase_A = meas_50Hz (&Meas50Ch[VOLT_A], *(Buf + (ADC2_CH_CNT * i) + VOLT_A)); 
-          M.Volt_Phase_B = meas_50Hz (&Meas50Ch[VOLT_B], *(Buf + (ADC2_CH_CNT * i) + VOLT_B));
-          M.Volt_Phase_C = meas_50Hz (&Meas50Ch[VOLT_C], *(Buf + (ADC2_CH_CNT * i) + VOLT_C));
+        for (i=0; i<40; i++){                                                   // Фильтрация сырых отсчетов АЦП
+          M.Volt_Phase_A    = meas_50Hz (&Meas50Ch[VOLT_A],    *(Buf + (ADC2_CH_CNT * i) + VOLT_A)); 
+          M.Volt_Phase_B    = meas_50Hz (&Meas50Ch[VOLT_B],    *(Buf + (ADC2_CH_CNT * i) + VOLT_B));
+          M.Volt_Phase_C    = meas_50Hz (&Meas50Ch[VOLT_C],    *(Buf + (ADC2_CH_CNT * i) + VOLT_C));
+          
+          min_max_peak_detect(&M.Volt_Phase_A, &M.Volt_Phase_A_MIN, &M.Volt_Phase_A_MAX);// Пиковый детектор на каждом отсчете
+          min_max_peak_detect(&M.Volt_Phase_B, &M.Volt_Phase_B_MIN, &M.Volt_Phase_B_MAX);
+          min_max_peak_detect(&M.Volt_Phase_C, &M.Volt_Phase_C_MIN, &M.Volt_Phase_C_MAX);
+          
           
           M.Current_Phase_A = meas_50Hz (&Meas50Ch[CURRENT_A], *(Buf + (ADC2_CH_CNT * i) + CURRENT_A));
           M.Current_Phase_B = meas_50Hz (&Meas50Ch[CURRENT_B], *(Buf + (ADC2_CH_CNT * i) + CURRENT_B));
           M.Current_Phase_C = meas_50Hz (&Meas50Ch[CURRENT_C], *(Buf + (ADC2_CH_CNT * i) + CURRENT_C));
+          
+          min_max_peak_detect(&M.Current_Phase_A, &M.Current_Phase_A_MIN, &M.Current_Phase_A_MAX);
+          min_max_peak_detect(&M.Current_Phase_B, &M.Current_Phase_B_MIN, &M.Current_Phase_B_MAX);
+          min_max_peak_detect(&M.Current_Phase_C, &M.Current_Phase_C_MIN, &M.Current_Phase_C_MAX);
         }
 }
 
@@ -445,6 +482,39 @@ void scan_discrete_inputs (void){
 
 
 //******************************************************************************
+//   Обработка нажатия кнопки на плате
+//******************************************************************************
+/*
+  Функция неблокирующая, желательно вызывать с периодом в 1 мс
+*/
+void scan_onboard_send_btn  (void){
+static uint16_t Delay_Cnt=0;
+
+#define MAX_DELAY                       6000
+#define DELAY_SHORT_PRESS               100
+#define DELAY_LONG_PRESS                3000
+
+
+  if (HAL_GPIO_ReadPin(BTN_SEND_GPIO_Port, BTN_SEND_Pin) == GPIO_PIN_RESET) {   // Если есть нажатие
+    if (Delay_Cnt < MAX_DELAY) Delay_Cnt++;
+  }
+  else {                                                                        // Кнопка отпущена
+    if (Delay_Cnt) Delay_Cnt--;
+    
+          if (Delay_Cnt == DELAY_SHORT_PRESS){                                  // Короткое нажатие
+            Delay_Cnt = 0;
+            R.Button_Send_Flag = true;
+          } 
+          
+          if (Delay_Cnt == DELAY_LONG_PRESS){                                   // Долгое нажатие
+            Delay_Cnt = 0;
+            R.Button_Send_Flag = true;
+          }
+  }
+}
+
+
+//******************************************************************************
 //   Копирование 
 //******************************************************************************
 
@@ -502,6 +572,11 @@ void meas_and_send (void) {
 //    break;
 //  }
 }
+
+
+
+
+
 
 //******************************************************************************
 // ENF OF FILE

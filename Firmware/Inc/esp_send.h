@@ -43,15 +43,15 @@ extern SETTINGS_t S;
 extern uint32_t        DevID_Dw0;                                               // Уникальный ID контроллера
 extern uint32_t        DevID_Dw1;
 extern uint32_t        DevID_Dw2;
+extern int16_t         BigBuf[];                                     // Большой буфер для кодека и акселерометра. По очереди.
+
 
 extern char            TmpStr[128];
 //******************************************************************************
 // Секция прототипов глобальных функций
 //******************************************************************************
-void            get_DevID_from_server   (void);   
-void            txt_freq_send           (void);           
-void            txt_rare_send           (void);           
-void            bin_rare_send           (void);         
+void            ESP_Send_Packet         (void);
+void            get_DevID_from_server   (void);            
 //******************************************************************************
 // Секция определения макросов
 //******************************************************************************

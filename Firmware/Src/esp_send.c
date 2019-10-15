@@ -20,9 +20,10 @@ static uint8_t         POST_Body[2048];
 //******************************************************************************
 // Секция прототипов локальных функций
 //******************************************************************************
-//void local_func1 (void);
-//void local_func2 (void);
-//...
+void            txt_freq_send           (void);           
+void            txt_rare_send           (void);           
+void            bin_rare_send           (uint8_t *Buf, uint8_t Channel, MicDataType_e DataType);
+bool            server_connect          (void);
 //******************************************************************************
 // Секция описания функций (сначала глобальных, потом локальных)
 //******************************************************************************
@@ -51,12 +52,81 @@ bool get_DevID_cb (uint8_t *line) {
                                 DEBUG("\nDevice ID: ");
                                 DEBUG((char*)R.DeviceID);
                                 DEBUG("\n");
+                                R.DeviceID_OK = true;
                                 R.ESP_PacketType_to_send = TXT_FREQ;
                                 M.ESP_MsgCnt++;
                                 return true;
                           }
 return false;      
 }
+
+
+
+
+
+
+//******************************************************************************
+//   Соединение с сервером
+//******************************************************************************
+/*
+return true - connected
+return false - error
+*/
+bool server_connect (void){
+                                                                                // Попытка 1
+  DEBUG("Try to connect 1\n");                                                  // Соединяемся. Если да - выходим с 1
+  SendCmd("AT+CIPMUX=0\r\n");     
+  SendCmd("AT+CIPMODE=0\r\n");
+  sprintf(TmpStr,"AT+CIPSTART=\"TCP\",\"%s\",%d\r\n", S.Srv1.Domain, S.Srv1.Port);
+                  //sprintf(TmpStr,"AT+CIPSTART=\"TCP\",\"192.168.1.158\",8123\r\n");
+  if (SendCmd(TmpStr) == 0) {
+    return true;
+  }
+
+                                                                                // Попытка 2
+                                                                                // Делаем рассоединение принудительное
+  DEBUG("Try to connect 2\n");                                                  // Соединяемся. Если да - выходим с 1
+  SendCmd("AT+CIPCLOSE\r\n");                                                   // Закрытие соединения
+  SendCmd("AT+CIPMUX=0\r\n");  
+  SendCmd("AT+CIPMODE=0\r\n");
+  sprintf(TmpStr,"AT+CIPSTART=\"TCP\",\"%s\",%d\r\n", S.Srv1.Domain, S.Srv1.Port);
+                  //sprintf(TmpStr,"AT+CIPSTART=\"TCP\",\"192.168.1.158\",8123\r\n");
+  if (SendCmd(TmpStr) == 0) {
+    return true;
+  }
+  
+                                                                                // Попытка 3
+                                                                                // Аппаратный сброс ЕСП
+                                                                                // Подкрючение к АР
+                                                                                // Соединяемся. Если да, выходим с 1
+                                                                                // Если не удалось - выходим с 0 
+  DEBUG("Try to connect 3\n");
+  __WIFI_RESET  (0);                                                            // ESP HW reset
+  HAL_Delay(20);
+  __WIFI_RESET  (1);
+  HAL_Delay(2000);
+  
+  R.DeviceID_OK = false;                                                        // Отмена регистрации на сервере
+  
+  while (!ESP_Init()){                                                          // Запуск ESP8266
+        DEBUG("ESP init failure\n");
+        HAL_Delay(2000);
+  }
+  
+  SendCmd("AT+CIPMUX=0\r\n");                                                   // Попытка соединения                                     
+  sprintf(TmpStr,"AT+CIPSTART=\"TCP\",\"%s\",%d\r\n", S.Srv1.Domain, S.Srv1.Port);
+                  //sprintf(TmpStr,"AT+CIPSTART=\"TCP\",\"192.168.1.158\",8123\r\n");
+  if (SendCmd(TmpStr) == 0) {
+    return true;
+  }
+  
+  
+return false;
+}
+
+
+
+
 
 
 //******************************************************************************
@@ -90,22 +160,20 @@ void get_DevID_from_server(void) {
                                 "\r\n",\
                                 strlen((char*)POST_Body));
     
-    // Установление связи с сервером :
-    SendCmd("AT+CIPMUX=1\r\n");                                           
-    sprintf(TmpStr,"AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", S.Srv1.Domain, S.Srv1.Port);
-    if (SendCmd(TmpStr) == 0) {
+    // Установление связи с сервером и отправка:
+    if (server_connect() == true) {
         __LED_SERV_CONNECT(1);  
     
           // Формирование команды на отправку данных с актуальной длиной передаваемого пакета
           //char TmpStr[32];
-          sprintf(TmpStr, "AT+CIPSEND=0,%d\r\n", (strlen((char*)POST_Header)+strlen((char*)POST_Body)));
+          sprintf(TmpStr, "AT+CIPSEND=%d\r\n", (strlen((char*)POST_Header)+strlen((char*)POST_Body)));
           SendCmd(TmpStr);
                                            
           // Отправка POST запроса
           SendCmd((char*)POST_Header);
           SendCmd_cb((char*)POST_Body, get_DevID_cb);
 
-          SendCmd("AT+CIPCLOSE=0\r\n");                       // Закрытие соединения
+          SendCmd("AT+CIPCLOSE\r\n");                       // Закрытие соединения
         __LED_SERV_ACK(0);
         __LED_SERV_CONNECT(0);
     } ; 
@@ -180,21 +248,19 @@ void send_AC(void){
                                 strlen((char*)POST_Body));
     
     // Установление связи с сервером :
-    SendCmd("AT+CIPMUX=1\r\n");
-    sprintf(TmpStr,"AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", S.Srv1.Domain, S.Srv1.Port);
-    if (SendCmd(TmpStr) == 0) {
+    if (server_connect() == true) {
         __LED_SERV_CONNECT(1);  
     
           // Формирование команды на отправку данных с актуальной длиной передаваемого пакета
           //char TmpStr[32];
-          sprintf(TmpStr, "AT+CIPSEND=0,%d\r\n", (strlen((char*)POST_Header)+strlen((char*)POST_Body)));
+          sprintf(TmpStr, "AT+CIPSEND=%d\r\n", (strlen((char*)POST_Header)+strlen((char*)POST_Body)));
           SendCmd(TmpStr);
                                            
           // Отправка POST запроса
           SendCmd((char*)POST_Header);
           SendCmd_cb((char*)POST_Body, send_ACK_test);
           
-          SendCmd("AT+CIPCLOSE=0\r\n");                                         // Закрытие соединения 
+          SendCmd("AT+CIPCLOSE\r\n");                                         // Закрытие соединения 
         __LED_SERV_CONNECT(0);
         __LED_SERV_ACK(0);
         
@@ -252,21 +318,19 @@ void send_DC (void){
                                 strlen((char*)POST_Body));
     
     // Установление связи с сервером :
-    SendCmd("AT+CIPMUX=1\r\n");
-    sprintf(TmpStr,"AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", S.Srv1.Domain, S.Srv1.Port);
-    if (SendCmd(TmpStr) == 0) {
+    if (server_connect() == true) {
         __LED_SERV_CONNECT(1);  
     
           // Формирование команды на отправку данных с актуальной длиной передаваемого пакета
           //char TmpStr[32];
-          sprintf(TmpStr, "AT+CIPSEND=0,%d\r\n", (strlen((char*)POST_Header)+strlen((char*)POST_Body)));
+          sprintf(TmpStr, "AT+CIPSEND=%d\r\n", (strlen((char*)POST_Header)+strlen((char*)POST_Body)));
           SendCmd(TmpStr);
                                            
           // Отправка POST запроса
           SendCmd((char*)POST_Header);
           SendCmd_cb((char*)POST_Body, send_ACK_test);
           
-          SendCmd("AT+CIPCLOSE=0\r\n");                                         // Закрытие соединения 
+          SendCmd("AT+CIPCLOSE\r\n");                                         // Закрытие соединения 
         __LED_SERV_CONNECT(0);
         __LED_SERV_ACK(0);
         
@@ -274,6 +338,89 @@ void send_DC (void){
     M.ESP_MsgCnt++;
 }
 
+//******************************************************************************
+//   Отправка бинарного пакета
+//******************************************************************************
+/*
+Отправка:
+Готовим описательную часть запроса - там где описано что и от кого, без бинарного участка
+Готовим заголовок
+
+Отправляем заголовок, описательную часть и все бинарные части
+
+Сложность в подсчете длины всего блока.
+Длина бинарной части:
+- определяем кол-во блоков (длину бинарного блока делим на 1200 байт) + остаток. Если остаток есть то +1 блок к частному
+- к длине бинарного массива прибавляем длину начального и оконечного маркера * на кол-во блоков 
+
+*/
+void send_bin (uint16_t *Buf, uint32_t Len_byte){
+  memset(POST_Header, 0, sizeof(POST_Header));
+  memset(POST_Body, 0,   sizeof(POST_Body));
+      
+  // Подготовка описательной части POST запроса 
+    sprintf((char*)POST_Body, \
+          "{"\
+            "\"messageMapId\":\"post-device-data\","\
+            "\"data\":{"\
+                "\"deviceId\":\"%s\","\
+                "\"hardwareRevision\":\"%s\","\
+                "\"firmwareVersion\":\"%s\","\
+                "\"messageSentReason\":\"%s\","\
+                "\"messageNumber\":%ld,"\
+                "\"upTime\":%ld,"\
+                "\"upTimeUnit\":\"s\",",\
+          R.DeviceID, HARDWARE_REV, FIRMWARE_REV, "time", M.ESP_MsgCnt, M.UpTime
+       );
+    
+    strcat((char*)POST_Body, "\"onBoard\":[");
+    add_json_onboard_inlet (POST_Body, "supplyVoltage",  M.Power_Sense, "V");   strcat((char*)POST_Body, ",");
+    add_json_onboard_inlet (POST_Body, "onBoardBattery", M.Vbat,        "V");   strcat((char*)POST_Body, ",");
+    add_json_onboard_inlet (POST_Body, "MCUTemperature", M.Temp_MCU,    "C");   
+    strcat((char*)POST_Body, "],");
+    strcat((char*)POST_Body, "\"inputs\":[");
+  
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_A", "voltage", __VOLT_PhA, "V"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_B", "voltage", __VOLT_PhB, "V"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_C", "voltage", __VOLT_PhC, "V"); strcat((char*)POST_Body, ",");
+    
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_A", "current", __CURRENT_PhA, "A"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_B", "current", __CURRENT_PhB, "A"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_C", "current", __CURRENT_PhC, "A"); 
+    
+    strcat((char*)POST_Body, "]}}");
+    
+    // Подготовка заголовка 
+    sprintf((char*)POST_Header, "POST /sensors HTTP/1.1\r\n"\
+                                "Host: motor-diag.7bits.it\r\n"\
+                                "Accept: */*\r\n"\
+                                "Content-Type: application/json\r\n"\
+                                "Content-Length: %d\r\n"\
+                                "Connection: Close\r\n"\
+                                "\r\n",\
+                                strlen((char*)POST_Body));
+    
+    // Установление связи с сервером :
+    if (server_connect() == true) {
+        __LED_SERV_CONNECT(1);  
+    
+          // Формирование команды на отправку данных с актуальной длиной передаваемого пакета
+          //char TmpStr[32];
+          sprintf(TmpStr, "AT+CIPSEND=%d\r\n", (strlen((char*)POST_Header)+strlen((char*)POST_Body)));
+          SendCmd(TmpStr);
+                                           
+          // Отправка POST запроса
+          SendCmd((char*)POST_Header);
+          SendCmd_cb((char*)POST_Body, send_ACK_test);
+          
+          SendCmd("AT+CIPCLOSE\r\n");                                         // Закрытие соединения 
+        __LED_SERV_CONNECT(0);
+        __LED_SERV_ACK(0);
+        
+    };
+    M.ESP_MsgCnt++;
+}             
+             
 
 
 //******************************************************************************
@@ -282,7 +429,7 @@ void send_DC (void){
 void txt_freq_send(void){
   
   
-  if (S.AC_In_Send_Enable)       { send_AC();           };
+  if (S.AC_In_Send_Enable)       { send_AC(); clear_peak_detector_AC(); };
   if (S.DC_In_Send_Enable)       { send_DC();           };
 //  if (S.Discrete_In_Send_Enable) { send_Discrete();     };
 //  if (S.Speed_Send_Enable)       { send_Speed();        };
@@ -294,10 +441,158 @@ void txt_rare_send(void){
 
 };
 
-void bin_rare_send(void){
-  memset(POST_Header, 0, sizeof(POST_Header));
-  memset(POST_Body, 0,   sizeof(POST_Body));
+
+
+void send_bin_part (uint8_t *Start, 
+                    uint32_t Size, 
+                    uint16_t Part_Num, 
+                    uint8_t Channel,
+                    MicDataType_e DataType){
+                      
+                      
+//char Boundary_string[19];
+
+
+//  snprintf(Boundary_string,   9, "%ld", DevID_Dw0);
+//  snprintf(Boundary_string+9, 9, "%ld", DevID_Dw1);
+//  Boundary_string[18] = 0;  
+//  
+//  memset(POST_Header, 0, sizeof(POST_Header));
+//  memset(POST_Body, 0,   sizeof(POST_Body));
+//  
+//  // Подготовка заголовка 
+//  sprintf((char*)POST_Header, "POST /sensors_bin HTTP/1.1\r\n"\
+//                              "Host: motor-diag.7bits.it\r\n"\
+//                              "Content-Type: multipart/form-data; boundary=%s\r\n"\
+//                              "\r\n"\
+//                              "--%s\r\n"\
+//                              "Content-Disposition: form-data; name=\"messageMapID\"\r\n"\
+//                              "\r\n"\
+//                              "\"name of message map\"\r\n"\
+//                              "--%s\r\n"\
+//                              "Part №%d\r\n"\
+//                              "Accept: */*\r\n"\
+//                              "Content-Length: %d\r\n"\
+//                              "Connection: Close\r\n"\
+//                              "\r\n",\
+//                              Boundary_string,\
+//                              Boundary_string,\
+//                              Boundary_string,\
+//                              Part_Num,\
+//                              strlen((char*)POST_Body)\
+//                              );
+//  
+//  
+//  // Формирование команды на отправку данных с актуальной длиной передаваемого пакета
+//  //char TmpStr[32];
+//  sprintf(TmpStr, "AT+CIPSEND=0,%d\r\n", strlen((char*)POST_Header));
+//  SendCmd(TmpStr);
+//                                   
+//  // Отправка POST запроса
+//  SendCmd((char*)POST_Header);
+//  //SendCmd_cb((char*)POST_Body, send_ACK_test);
+  
+  
+//  sprintf(TmpStr, "AT+CIPSEND=0,%d\r\n", Size);
+//  SendCmd(TmpStr);
+  SendBin((uint8_t*)Start, Size);
+  
+}
+
+//******************************************************************************
+//   Отправка в бинарном формате редкая
+//******************************************************************************
+/*
+Отправляем содержимое буфера по частям. Все размеры задаем вручную.
+Имеем размер буфера заданный размером буфера. Скорее всего он будет ровно 100 000 байт.
+Будем отправлять его кусками. Соединение открываем один раз на все 100 кБ.
+Отправляем часть в два приема - сначала заголовок, потом bin тело.
+
+
+*/
+void bin_rare_send(uint8_t *Buf, uint8_t Channel, MicDataType_e DataType){
+uint16_t Part_Cnt;
+
+#define PART_CNT        40 //80
+#define PART_SIZE       2000
+
+            memset(Buf, 0, 80000);                                              // Заполнение буфера тестовыми значениями
+            for (uint8_t i=0;i<80;i++){
+              *((uint8_t*)Buf + (i*1000)) = i;
+            }
+  
+  if (server_connect() == true) {                                               // Открываем соединение с сервером
+      SendCmd("AT+CIPMODE=1\r\n");
+      SendCmd("AT+CIPSEND\r\n");
+      osDelay(300);
+      for (Part_Cnt=0;Part_Cnt<PART_CNT;Part_Cnt++){                            // Отправка бинарного сообщения
+        send_bin_part(Buf+(PART_SIZE * Part_Cnt), PART_SIZE, Part_Cnt, Channel, DataType);
+        //osDelay(20);
+      };
+      osDelay(2000);
+      DEBUG("+++\n");
+      UART2_Send((uint8_t *)"+++", 3);
+      osDelay(2000);
+  }
+  DEBUG("AT+CIPCLOSE\n");
+  SendCmd("AT+CIPCLOSE\r\n");                                                   // Закрываем соединение с сервером
+ 
 };
+
+
+
+
+
+void all_data_send (void){}
+
+
+
+//******************************************************************************
+//   Проверка необходимости отправки и отправить
+//******************************************************************************
+void ESP_Send_Packet (void) {
+  
+  if (R.DeviceID_OK == true) {
+    
+    
+    
+            if (R.Timer_Send_Freq == 0) {                                       // Частая отправка (дискретные измерения)
+              R.Timer_Send_Freq = S.Interval_Send_Freq;
+              txt_freq_send();
+            }
+            
+            if (R.Timer_Send_Rare == 0) {                                       // Редкая отправка (буфер 80 кБ)
+              R.Timer_Send_Rare = S.Interval_Send_Rare;
+              //bin_rare_send((uint8_t*)BigBuf, 0, SRC_fd48kHz_16bit);
+            }
+            
+            if (R.Button_Send_Flag == true){                                    // Отправка всего по кнопке
+              R.Button_Send_Flag = false;
+              //txt_freq_send();
+              bin_rare_send((uint8_t*)BigBuf, 0, SRC_fd48kHz_16bit);
+            }
+    
+    
+    
+  } else {
+    get_DevID_from_server();
+  }
+  
+  
+  
+  
+
+
+//  switch (Type) {                                   
+//      case NO_SEND:       /*osThreadYield();*/                          break;
+//      case GET_DEVIDSRV:    get_DevID_from_server();                    break;
+//      case TXT_FREQ:        txt_freq_send();                            break;
+//      case TXT_RARE:        txt_rare_send();                            break;
+//      case BIN_RARE:        bin_rare_send(0, SRC_fd48kHz_16bit);        break;
+//      default:                                                          break;
+//  }
+
+}
 //******************************************************************************
 // ENF OF FILE
 //******************************************************************************

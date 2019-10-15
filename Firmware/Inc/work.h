@@ -105,8 +105,8 @@ typedef struct {
   
   
   //---   Behavior   -----------------------------------------------------------
-  uint16_t              Freq_Send_Interval;                                     // Интервал отправки аналоговых входов в секундах
-  uint16_t              Slow_Send_Interval;                                     // Интервал отправки микрофонов и акселерометров в секундах
+  uint16_t              Interval_Send_Freq;                                     // Интервал отправки аналоговых входов в секундах
+  uint16_t              Interval_Send_Rare;                                     // Интервал отправки микрофонов и акселерометров в секундах
   
   bool                  AC_In_Send_Enable;
   bool                  DC_In_Send_Enable;
@@ -167,6 +167,25 @@ SEND_TYPE_e;
 
 
 
+
+typedef enum {                  // Что отправляем в виде бинарных данных
+  SRC_fd48kHz_16bit,            // Весь спектр 0-24кГц 16 бит (сырой АЦП)
+  SRC_fd8kHz_bw3kHz_16bit       // Кусочек спектра шириной 3 кГц 16 бит (SSB USB)
+}
+MicDataType_e;
+
+typedef enum {          // Виды причины отправки сообщения
+  NO_SEND_REASON,
+  TIMER_FREQ_REASON,
+  TIMER_RARE_REASON,
+  BUTTON_REASON,
+  DISCRETE_CHANGE_REASON,
+  LEVEL_REASON,
+  OTHER_REASON
+}
+SEND_REASON_e;
+
+
 typedef struct {
   
   bool          Lock;
@@ -193,9 +212,26 @@ typedef struct {
   float         Volt_Phase_B;
   float         Volt_Phase_C;
   
+  float         Volt_Phase_A_MAX;
+  float         Volt_Phase_B_MAX;
+  float         Volt_Phase_C_MAX;
+  
+  float         Volt_Phase_A_MIN;
+  float         Volt_Phase_B_MIN;
+  float         Volt_Phase_C_MIN;
+  
+  
   float         Current_Phase_A;
   float         Current_Phase_B;
   float         Current_Phase_C;
+  
+  float         Current_Phase_A_MAX;
+  float         Current_Phase_B_MAX;
+  float         Current_Phase_C_MAX;
+  
+  float         Current_Phase_A_MIN;
+  float         Current_Phase_B_MIN;
+  float         Current_Phase_C_MIN;
   
   //---   Discrete Inputs   ----------------------------------------------------
   DIN_t         Discrete;
@@ -208,10 +244,15 @@ MEAS_t;
 typedef struct {
   
   uint8_t               DeviceID[50];                                           // Для ID который выдаст сервер
+  bool                  DeviceID_OK;
   SEND_TYPE_e           ESP_PacketType_to_send;                                 // Что отправлем сейчас: Текст короткий, длиный, запрос ID, бинарник
   bool                  WiFi_Connected;                                         // Флаг для информации
   bool                  OLED_Refresh_Enable;
   
+  uint32_t              Timer_Send_Freq;                                        // Таймер для отправки частых сообщений
+  uint32_t              Timer_Send_Rare;                                        // Таймер для отправки редких сообщений
+  bool                  Button_Send_Flag;                                       // Флаг будет поставлен в обработчик кнопки, очищен после отправки сообщения
+
   
   uint16_t             *ADC1_Start_Point;                                       // Адрес полубуфера готового к обработке
   uint16_t             *ADC2_Start_Point;                                       // Адрес полубуфера готового к обработке
@@ -281,16 +322,20 @@ extern DMA_HandleTypeDef hdma_usart3_rx;
 // Секция прототипов глобальных функций
 //******************************************************************************
 void            board_init                              (void);
+void            bluetooth_init                          (void);
 void            meas_and_send                           (void);
 void            meas_50Hz_DMA_Int_routine               (uint16_t *Buf);
 void            meas_AINx_DMA_Int_routine               (uint16_t *Buf);
 void            scan_discrete_inputs                    (void);
+void            scan_onboard_send_btn                   (void);
 void            save_settings_to_EEPROM                 (SETTINGS_t *Data);
 void            load_default_settings_to_EEPROM         (void);
 SETTINGS_t      load_settings_from_EEPROM               (void);
 void            ADC2_DMA_XferCpltCallback               (struct __DMA_HandleTypeDef *hdma);
 void            ADC2_DMA_XferHalfCpltCallback           (struct __DMA_HandleTypeDef *hdma);
 void            codec_IT_routine                        (void);
+void            clear_peak_detector_AC                  (void);
+
 //******************************************************************************
 // Секция определения макросов
 //******************************************************************************
@@ -310,13 +355,29 @@ void            codec_IT_routine                        (void);
                                 ((PinState == 0)?(GPIO_PIN_SET):(GPIO_PIN_RESET)))
 
 
-#define __CURRENT_PhA           (M.Current_Phase_A * S.Curr[PhA].K * S.Curr[PhA].R)
-#define __CURRENT_PhB           (M.Current_Phase_B * S.Curr[PhB].K * S.Curr[PhB].R)
-#define __CURRENT_PhC           (M.Current_Phase_C * S.Curr[PhC].K * S.Curr[PhC].R)
+#define __CURRENT_PhA           (M.Current_Phase_A     * S.Curr[PhA].K * S.Curr[PhA].R)
+#define __CURRENT_PhB           (M.Current_Phase_B     * S.Curr[PhB].K * S.Curr[PhB].R)
+#define __CURRENT_PhC           (M.Current_Phase_C     * S.Curr[PhC].K * S.Curr[PhC].R)
 
-#define __VOLT_PhA              (M.Volt_Phase_A    * S.Volt[PhA].K * S.Volt[PhA].R)
-#define __VOLT_PhB              (M.Volt_Phase_B    * S.Volt[PhB].K * S.Volt[PhB].R)
-#define __VOLT_PhC              (M.Volt_Phase_C    * S.Volt[PhC].K * S.Volt[PhC].R)
+#define __CURRENT_PhA_MAX       (M.Current_Phase_A_MAX * S.Curr[PhA].K * S.Curr[PhA].R)
+#define __CURRENT_PhB_MAX       (M.Current_Phase_B_MAX * S.Curr[PhB].K * S.Curr[PhB].R)
+#define __CURRENT_PhC_MAX       (M.Current_Phase_C_MAX * S.Curr[PhC].K * S.Curr[PhC].R)
+
+#define __CURRENT_PhA_MIN       (M.Current_Phase_A_MIN * S.Curr[PhA].K * S.Curr[PhA].R)
+#define __CURRENT_PhB_MIN       (M.Current_Phase_B_MIN * S.Curr[PhB].K * S.Curr[PhB].R)
+#define __CURRENT_PhC_MIN       (M.Current_Phase_C_MIN * S.Curr[PhC].K * S.Curr[PhC].R)
+
+#define __VOLT_PhA              (M.Volt_Phase_A        * S.Volt[PhA].K * S.Volt[PhA].R)
+#define __VOLT_PhB              (M.Volt_Phase_B        * S.Volt[PhB].K * S.Volt[PhB].R)
+#define __VOLT_PhC              (M.Volt_Phase_C        * S.Volt[PhC].K * S.Volt[PhC].R)
+
+#define __VOLT_PhA_MAX          (M.Volt_Phase_A_MAX    * S.Volt[PhA].K * S.Volt[PhA].R)
+#define __VOLT_PhB_MAX          (M.Volt_Phase_B_MAX    * S.Volt[PhB].K * S.Volt[PhB].R)
+#define __VOLT_PhC_MAX          (M.Volt_Phase_C_MAX    * S.Volt[PhC].K * S.Volt[PhC].R)
+
+#define __VOLT_PhA_MIN          (M.Volt_Phase_A_MAX    * S.Volt[PhA].K * S.Volt[PhA].R)
+#define __VOLT_PhB_MIN          (M.Volt_Phase_B_MIN    * S.Volt[PhB].K * S.Volt[PhB].R)
+#define __VOLT_PhC_MIN          (M.Volt_Phase_C_MIN    * S.Volt[PhC].K * S.Volt[PhC].R)
 
 
 #endif // Закрывающий #endif к блокировке повторного включения

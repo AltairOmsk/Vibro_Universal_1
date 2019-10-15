@@ -29,10 +29,12 @@
 #include <string.h>
 #include "usart.h"
 #include "esp.h"
+#include "esp_send.h"
 #include "codec.h"
 #include "com_control.h"
 #include "ssd1306.h"
 #include "fonts.h"
+#include "display.h"
   
    
 extern          MEAS_t M;
@@ -209,7 +211,16 @@ static uint16_t Tick;
 		--EspTimer;
 	if (EspSendTimer != 0)
 		--EspSendTimer;
-        if (++Tick == 1000) Tick=0, M.UpTime++;
+        
+        //---   1 sec   --------------------------------------------------------
+        if (++Tick == 1000){
+            Tick=0;
+            M.UpTime++;
+            if (R.Timer_Send_Freq != 0)  R.Timer_Send_Freq--;                   // Таймер отправки частых измерений 
+            if (R.Timer_Send_Rare != 0)  R.Timer_Send_Rare--;                   // Таймер отправки редких измерений
+        } 
+        
+        
 }
 
 
@@ -308,6 +319,27 @@ int main(void)
         
 	DEBUG("\nCONCENTRATOR \"UNIVERSAL-1\"\n");
         
+        if (HAL_GPIO_ReadPin(BTN_SEND_GPIO_Port, BTN_SEND_Pin) == GPIO_PIN_RESET) {
+       
+            bluetooth_init();
+            
+            load_default_settings_to_EEPROM();
+            DEBUG("\nDefault settings loaded\n");
+            sprintf(TmpStr, "BT_Name:VIB_%02d%02d\n", DevID_Dw0&0xFF, (DevID_Dw0>>16)&0xFF);
+            DEBUG(TmpStr);
+            
+            ssd1306_Init();  
+            ssd1306_SetCursor(0,0);
+            sprintf(TmpStr, "BT_Name:VIB_%02d%02d", DevID_Dw0&0xFF, (DevID_Dw0>>16)&0xFF);
+            ssd1306_WriteString(TmpStr,Font_7x10,White);
+            ssd1306_SetCursor(0,16);
+            sprintf(TmpStr, "Def EEPROM loaded");
+            ssd1306_WriteString(TmpStr,Font_7x10,White);
+            ssd1306_UpdateScreen(); 
+            
+            while(HAL_GPIO_ReadPin(BTN_SEND_GPIO_Port, BTN_SEND_Pin) == GPIO_PIN_RESET);
+ 
+        }
 
   
   /* USER CODE END 2 */
@@ -1246,6 +1278,7 @@ void StartDefaultTask(void const * argument)
   {
     BT_Processing();
     meas_and_send();
+    scan_onboard_send_btn();
     //char G[100];
     //sprintf(G,"V A=%.3f B=%.3f C=%.3f\r\n", M.Volt_Phase_A, M.Volt_Phase_B, M.Volt_Phase_C); M.VrefINT
     //sprintf(G,"Bat=%.2f Pwr=%.2f AIN0=%.3fV AIN1=%.3f\r\n", M.Vbat, M.Power_Sense, M.AIN_0, M.AIN_1);
@@ -1342,9 +1375,8 @@ void Start_WIFI_SEND_Routine(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    ESP_Send_Packet(R.ESP_PacketType_to_send);
-    if (R.ESP_PacketType_to_send != GET_DEVIDSRV) osDelay(58000);
-    osDelay(2000);
+    ESP_Send_Packet();
+    taskYIELD();
   }
   /* USER CODE END Start_WIFI_SEND_Routine */
 }

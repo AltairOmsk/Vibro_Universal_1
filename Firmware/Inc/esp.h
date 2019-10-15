@@ -103,8 +103,8 @@ bool            ESP_Init                (void);
 void            ESP_DeInit              (void);
 uint32_t        ESP_Version             (void);
 void            ESP_Processing          (void);
-void            ESP_Send_Packet         (SEND_TYPE_e Type);
 ESP_Error_t     SendCmd                 (const char * cmd);
+ESP_Error_t     SendBin                 (uint8_t *Buf, uint32_t Length);
 ESP_Error_t     SendCmd_cb              (const char * cmd, sendcmd_cb_t cb);
 void            BT_Processing           (void);
 

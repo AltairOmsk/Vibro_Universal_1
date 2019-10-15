@@ -141,6 +141,17 @@ void BT_ParseCommand (char *Line){
         }
         S.Curr[PhC].R = calculate_R_scale(M.Current_Phase_C * S.Curr[PhC].K, (float)atof(Tmp_buf));
       break;
+      case 'X':
+        ii=0; Ptr++; Ptr++;
+        while (*Ptr != '\r'){                                                   // »щем до конца строки
+          if (ii>8) { break; }
+          Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  //  опируем номер порта во временную строку                
+          if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // явно обозначаем конец строки                                       
+        }
+        S.Curr[PhC].R = calculate_R_scale(M.Current_Phase_C * S.Curr[PhC].K, (float)atof(Tmp_buf));
+        S.Curr[PhB].R = calculate_R_scale(M.Current_Phase_B * S.Curr[PhB].K, (float)atof(Tmp_buf));
+        S.Curr[PhA].R = calculate_R_scale(M.Current_Phase_A * S.Curr[PhA].K, (float)atof(Tmp_buf));
+      break;
     default:
       DEBUG("\nERROR\n");
       break;
@@ -496,14 +507,33 @@ static void Meas_Send           (void){
   sprintf(Tmp_buf, "Ext power: %.1fV, VBAT: %.1fV\r\n", M.Power_Sense, M.Vbat);
   DEBUG(Tmp_buf);
   
+  
   sprintf(Tmp_buf, "ADC A: %.3fV, %.3fA\r\n", M.Volt_Phase_A, M.Current_Phase_A);
   DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase A: %.1fV, %.2fA\r\n", __VOLT_PhA, __CURRENT_PhA);
+  DEBUG("\r\n");
+  sprintf(Tmp_buf, "Phase A:     %.1fV, %.2fA\r\n", __VOLT_PhA, __CURRENT_PhA);
   DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase B: %.1fV, %.2fA\r\n", __VOLT_PhB, __CURRENT_PhB);
+  sprintf(Tmp_buf, "Phase A MAX: %.1fV, %.2fA\r\n", __VOLT_PhA_MAX, __CURRENT_PhA_MAX);
   DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase C: %.1fV, %.2fA\r\n", __VOLT_PhC, __CURRENT_PhC);
+  sprintf(Tmp_buf, "Phase A MIN: %.1fV, %.2fA\r\n", __VOLT_PhA_MIN, __CURRENT_PhA_MIN);
   DEBUG(Tmp_buf);
+  DEBUG("\r\n");
+  sprintf(Tmp_buf, "Phase B    : %.1fV, %.2fA\r\n", __VOLT_PhB, __CURRENT_PhB);
+  DEBUG(Tmp_buf);
+  sprintf(Tmp_buf, "Phase B_MAX: %.1fV, %.2fA\r\n", __VOLT_PhB_MAX, __CURRENT_PhB_MAX);
+  DEBUG(Tmp_buf);
+  sprintf(Tmp_buf, "Phase B_MIN: %.1fV, %.2fA\r\n", __VOLT_PhB_MIN, __CURRENT_PhB_MIN);
+  DEBUG(Tmp_buf);
+  DEBUG("\r\n");
+  sprintf(Tmp_buf, "Phase C    : %.1fV, %.2fA\r\n", __VOLT_PhC, __CURRENT_PhC);
+  DEBUG(Tmp_buf);
+  sprintf(Tmp_buf, "Phase C_MAX: %.1fV, %.2fA\r\n", __VOLT_PhC_MAX, __CURRENT_PhC_MAX);
+  DEBUG(Tmp_buf);
+  sprintf(Tmp_buf, "Phase C_MIN: %.1fV, %.2fA\r\n", __VOLT_PhC_MIN, __CURRENT_PhC_MIN);
+  DEBUG(Tmp_buf);
+  DEBUG("\r\n");
+  
+  clear_peak_detector_AC();
   
   sprintf(Tmp_buf, "DC In_0: %.3fV\r\n", M.AIN_0);
   DEBUG(Tmp_buf);
@@ -520,6 +550,7 @@ static void Meas_Send           (void){
   sprintf(Tmp_buf, "DC In_6: %.3fV\r\n", M.AIN_6);
   DEBUG(Tmp_buf);
   
+  DEBUG("\r\n");
   sprintf(Tmp_buf, "Discrete IN_0: %d\r\n", M.Discrete.IN_0);
   DEBUG(Tmp_buf);
   sprintf(Tmp_buf, "Discrete IN_1: %d\r\n", M.Discrete.IN_1);
@@ -536,6 +567,7 @@ static void Meas_Send           (void){
   DEBUG(Tmp_buf);
   sprintf(Tmp_buf, "Discrete IN_7: %d\r\n", M.Discrete.IN_7);
   DEBUG(Tmp_buf);
+  DEBUG("\r\n");
   
   sprintf(Tmp_buf, "Speed 1: >10000 ms\r\n");
   DEBUG(Tmp_buf);
