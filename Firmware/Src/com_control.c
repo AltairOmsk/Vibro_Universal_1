@@ -75,7 +75,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Curr[PhA].K = calculate_K_scale(M.Current_Phase_A, atoi(Tmp_buf));
+        S.Curr[PhA].K = calculate_K_scale(M.Current_Phase_A_raw, atoi(Tmp_buf));
       break;
       case 'B':
         ii=0; Ptr++; Ptr++;
@@ -84,7 +84,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Curr[PhB].K = calculate_K_scale(M.Current_Phase_B, atoi(Tmp_buf));
+        S.Curr[PhB].K = calculate_K_scale(M.Current_Phase_B_raw, atoi(Tmp_buf));
       break;
       case 'C':
         ii=0; Ptr++; Ptr++;
@@ -93,7 +93,18 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Curr[PhC].K = calculate_K_scale(M.Current_Phase_C, atoi(Tmp_buf));
+        S.Curr[PhC].K = calculate_K_scale(M.Current_Phase_C_raw, atoi(Tmp_buf));
+      break;
+      case 'X':
+        ii=0; Ptr++; Ptr++;
+        while (*Ptr != '\r'){                                                   // Ищем до конца строки
+          if (ii>8) { break; }
+          Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
+          if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
+        }
+        S.Curr[PhA].K = calculate_K_scale(M.Current_Phase_A_raw, atoi(Tmp_buf));
+        S.Curr[PhB].K = calculate_K_scale(M.Current_Phase_B_raw, atoi(Tmp_buf));
+        S.Curr[PhC].K = calculate_K_scale(M.Current_Phase_C_raw, atoi(Tmp_buf));
       break;
     default:
       DEBUG("\nERROR\n");
@@ -121,7 +132,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Curr[PhA].R = calculate_R_scale(M.Current_Phase_A * S.Curr[PhA].K, (float)atof(Tmp_buf));
+        S.Curr[PhA].R = calculate_R_scale(M.Current_Phase_A_raw * S.Curr[PhA].K, (float)atof(Tmp_buf));
       break;
       case 'B':
         ii=0; Ptr++; Ptr++;
@@ -130,7 +141,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Curr[PhB].R = calculate_R_scale(M.Current_Phase_B * S.Curr[PhB].K, (float)atof(Tmp_buf));
+        S.Curr[PhB].R = calculate_R_scale(M.Current_Phase_B_raw * S.Curr[PhB].K, (float)atof(Tmp_buf));
       break;
       case 'C':
         ii=0; Ptr++; Ptr++;
@@ -139,7 +150,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Curr[PhC].R = calculate_R_scale(M.Current_Phase_C * S.Curr[PhC].K, (float)atof(Tmp_buf));
+        S.Curr[PhC].R = calculate_R_scale(M.Current_Phase_C_raw * S.Curr[PhC].K, (float)atof(Tmp_buf));
       break;
       case 'X':
         ii=0; Ptr++; Ptr++;
@@ -148,9 +159,9 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Curr[PhC].R = calculate_R_scale(M.Current_Phase_C * S.Curr[PhC].K, (float)atof(Tmp_buf));
-        S.Curr[PhB].R = calculate_R_scale(M.Current_Phase_B * S.Curr[PhB].K, (float)atof(Tmp_buf));
-        S.Curr[PhA].R = calculate_R_scale(M.Current_Phase_A * S.Curr[PhA].K, (float)atof(Tmp_buf));
+        S.Curr[PhC].R = calculate_R_scale(M.Current_Phase_C_raw * S.Curr[PhC].K, (float)atof(Tmp_buf));
+        S.Curr[PhB].R = calculate_R_scale(M.Current_Phase_B_raw * S.Curr[PhB].K, (float)atof(Tmp_buf));
+        S.Curr[PhA].R = calculate_R_scale(M.Current_Phase_A_raw * S.Curr[PhA].K, (float)atof(Tmp_buf));
       break;
     default:
       DEBUG("\nERROR\n");
@@ -177,7 +188,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Volt[PhA].K = calculate_K_scale(M.Volt_Phase_A, atoi(Tmp_buf));
+        S.Volt[PhA].K = calculate_K_scale(M.Volt_Phase_A_raw, atoi(Tmp_buf));
       break;
       case 'B':
         ii=0; Ptr++; Ptr++;
@@ -186,7 +197,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Volt[PhB].K = calculate_K_scale(M.Volt_Phase_B, atoi(Tmp_buf));
+        S.Volt[PhB].K = calculate_K_scale(M.Volt_Phase_B_raw, atoi(Tmp_buf));
       break;
       case 'C':
         ii=0; Ptr++; Ptr++;
@@ -195,7 +206,18 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Volt[PhC].K = calculate_K_scale(M.Volt_Phase_C, atoi(Tmp_buf));
+        S.Volt[PhC].K = calculate_K_scale(M.Volt_Phase_C_raw, atoi(Tmp_buf));
+      break;
+      case 'X':
+        ii=0; Ptr++; Ptr++;
+        while (*Ptr != '\r'){                                                   // Ищем до конца строки
+          if (ii>8) { break; }
+          Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
+          if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
+        }
+        S.Volt[PhA].K = calculate_K_scale(M.Volt_Phase_A_raw, atoi(Tmp_buf));
+        S.Volt[PhB].K = calculate_K_scale(M.Volt_Phase_B_raw, atoi(Tmp_buf));
+        S.Volt[PhC].K = calculate_K_scale(M.Volt_Phase_C_raw, atoi(Tmp_buf));
       break;
     default:
       DEBUG("\nERROR\n");
@@ -224,7 +246,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Volt[PhA].R = calculate_R_scale(M.Volt_Phase_A * S.Volt[PhA].K, (float)atof(Tmp_buf));
+        S.Volt[PhA].R = calculate_R_scale(M.Volt_Phase_A_raw * S.Volt[PhA].K, (float)atof(Tmp_buf));
       break;
       case 'B':
         ii=0; Ptr++; Ptr++;
@@ -233,7 +255,7 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Volt[PhB].R = calculate_R_scale(M.Volt_Phase_B * S.Volt[PhB].K, (float)atof(Tmp_buf));
+        S.Volt[PhB].R = calculate_R_scale(M.Volt_Phase_B_raw * S.Volt[PhB].K, (float)atof(Tmp_buf));
       break;
       case 'C':
         ii=0; Ptr++; Ptr++;
@@ -242,7 +264,18 @@ void BT_ParseCommand (char *Line){
           Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
           if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
         }
-        S.Volt[PhC].R = calculate_R_scale(M.Volt_Phase_C * S.Volt[PhC].K, (float)atof(Tmp_buf));
+        S.Volt[PhC].R = calculate_R_scale(M.Volt_Phase_C_raw * S.Volt[PhC].K, (float)atof(Tmp_buf));
+      break;
+      case 'X':
+        ii=0; Ptr++; Ptr++;
+        while (*Ptr != '\r'){                                                   // Ищем до конца строки
+          if (ii>8) { break; }
+          Tmp_buf[ii] = *Ptr;   Ptr++;   ii++;                                  // Копируем номер порта во временную строку                
+          if (*(Ptr) == '\r') Tmp_buf[ii] = '\0';                               // Явно обозначаем конец строки                                       
+        }
+        S.Volt[PhA].R = calculate_R_scale(M.Volt_Phase_A_raw * S.Volt[PhA].K, (float)atof(Tmp_buf));
+        S.Volt[PhB].R = calculate_R_scale(M.Volt_Phase_B_raw * S.Volt[PhB].K, (float)atof(Tmp_buf));
+        S.Volt[PhC].R = calculate_R_scale(M.Volt_Phase_C_raw * S.Volt[PhC].K, (float)atof(Tmp_buf));
       break;
     default:
       DEBUG("\nERROR\n");
@@ -278,6 +311,14 @@ void BT_ParseCommand (char *Line){
   Ptr=strstr(Line, "AT+MEAS");                                            
   if (Ptr){
     Meas_Send();
+  }
+  
+  //---------------------------------------------------------------------------- AT+RESET
+  Ptr=strstr(Line, "AT+RESET");                                              
+  if (Ptr){
+    DEBUG("+RESET\r\n");
+    osDelay(200);
+    NVIC_SystemReset();
   }
   
   //---------------------------------------------------------------------------- AT+SEND
@@ -455,6 +496,26 @@ void BT_ParseCommand (char *Line){
       break;
     }
   }
+  
+  //---------------------------------------------------------------------------- AT+SETSN=<Serial>
+  Ptr=strstr(Line, "AT+SETSN=");                                            
+  if (Ptr){
+    Ptr +=strlen("AT+SETSN=");
+    for (i=0;i<12;i++) { Tmp_buf[i]=0; } 
+    
+    ii=0; Ptr++; Ptr++;                                                         // Переход на строку номера
+    while (*Ptr != '\r'){                                                       // Ищем до конца строки
+        if (ii>30) { break; }
+        *(S.DeviceSerNum + ii) = *Ptr;   Ptr++;   ii++;                         // Копируем строку                   
+        if (*(Ptr) == '\r') *(S.AP1.Pass + ii) = '\0';                          // Явно обозначаем коней строки             
+    }
+    save_settings_to_EEPROM(&S);
+    sprintf (Tmp_buf, "\n+SETSN=%s\n", S.DeviceSerNum);
+    DEBUG(Tmp_buf);
+      
+  }
+
+  
 } // void BT_ParseCommand (char *Line)
 
 
@@ -511,25 +572,25 @@ static void Meas_Send           (void){
   sprintf(Tmp_buf, "ADC A: %.3fV, %.3fA\r\n", M.Volt_Phase_A, M.Current_Phase_A);
   DEBUG(Tmp_buf);
   DEBUG("\r\n");
-  sprintf(Tmp_buf, "Phase A:     %.1fV, %.2fA\r\n", __VOLT_PhA, __CURRENT_PhA);
+  sprintf(Tmp_buf, "Phase A:     %.1fV, %.2fA\r\n", M.Volt_Phase_A, M.Current_Phase_A);
   DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase A MAX: %.1fV, %.2fA\r\n", __VOLT_PhA_MAX, __CURRENT_PhA_MAX);
+  sprintf(Tmp_buf, "Phase A MAX: %.1fV, %.2fA\r\n", M.Volt_Phase_A_MAX, M.Current_Phase_A_MAX);
   DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase A MIN: %.1fV, %.2fA\r\n", __VOLT_PhA_MIN, __CURRENT_PhA_MIN);
-  DEBUG(Tmp_buf);
-  DEBUG("\r\n");
-  sprintf(Tmp_buf, "Phase B    : %.1fV, %.2fA\r\n", __VOLT_PhB, __CURRENT_PhB);
-  DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase B_MAX: %.1fV, %.2fA\r\n", __VOLT_PhB_MAX, __CURRENT_PhB_MAX);
-  DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase B_MIN: %.1fV, %.2fA\r\n", __VOLT_PhB_MIN, __CURRENT_PhB_MIN);
+  sprintf(Tmp_buf, "Phase A MIN: %.1fV, %.2fA\r\n", M.Volt_Phase_A_MIN, M.Current_Phase_A_MIN);
   DEBUG(Tmp_buf);
   DEBUG("\r\n");
-  sprintf(Tmp_buf, "Phase C    : %.1fV, %.2fA\r\n", __VOLT_PhC, __CURRENT_PhC);
+  sprintf(Tmp_buf, "Phase B    : %.1fV, %.2fA\r\n", M.Volt_Phase_B, M.Current_Phase_B);
   DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase C_MAX: %.1fV, %.2fA\r\n", __VOLT_PhC_MAX, __CURRENT_PhC_MAX);
+  sprintf(Tmp_buf, "Phase B_MAX: %.1fV, %.2fA\r\n", M.Volt_Phase_B_MAX, M.Current_Phase_B_MAX);
   DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "Phase C_MIN: %.1fV, %.2fA\r\n", __VOLT_PhC_MIN, __CURRENT_PhC_MIN);
+  sprintf(Tmp_buf, "Phase B_MIN: %.1fV, %.2fA\r\n", M.Volt_Phase_B_MIN, M.Current_Phase_B_MIN);
+  DEBUG(Tmp_buf);
+  DEBUG("\r\n");
+  sprintf(Tmp_buf, "Phase C    : %.1fV, %.2fA\r\n", M.Volt_Phase_C, M.Current_Phase_C);
+  DEBUG(Tmp_buf);
+  sprintf(Tmp_buf, "Phase C_MAX: %.1fV, %.2fA\r\n", M.Volt_Phase_C_MAX, M.Current_Phase_C_MAX);
+  DEBUG(Tmp_buf);
+  sprintf(Tmp_buf, "Phase C_MIN: %.1fV, %.2fA\r\n", M.Volt_Phase_C_MIN, M.Current_Phase_C_MIN);
   DEBUG(Tmp_buf);
   DEBUG("\r\n");
   

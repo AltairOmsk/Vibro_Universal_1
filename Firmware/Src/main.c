@@ -101,6 +101,7 @@ osThreadId OLED_OutHandle;
 osSemaphoreId BinarySem_ADC1_ReadyHandle;
 osSemaphoreId BinarySem_ADC2_50Hz_ReadyHandle;
 osSemaphoreId BinarySem_Codec_ADC_ReadyHandle;
+osSemaphoreId myBinarySem_DisplayOutHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -205,7 +206,7 @@ volatile uint32_t EspSendTimer = 0;
 void HAL_IncTick(void)
 {
 static uint16_t Tick;
-
+#define SCREEN_SHOW_TIME_MS     2000
 	uwTick += uwTickFreq;
 	if (EspTimer != 0)
 		--EspTimer;
@@ -219,6 +220,16 @@ static uint16_t Tick;
             if (R.Timer_Send_Freq != 0)  R.Timer_Send_Freq--;                   // Таймер отправки частых измерений 
             if (R.Timer_Send_Rare != 0)  R.Timer_Send_Rare--;                   // Таймер отправки редких измерений
         } 
+        
+        //---   Переключение экранов   -----------------------------------------
+        if (++R.OLED_Screen_Show_Timer >= SCREEN_SHOW_TIME_MS){
+          R.OLED_Screen_Show_Timer = 0;
+          
+          if (++R.OLED_Screen >= SCREEN_CNT) R.OLED_Screen = 0;   
+          R.OLED_Refresh_Enable = true;
+
+        }
+
         
         
 }
@@ -257,11 +268,12 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
+  
 
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init(); 
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -310,15 +322,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 //#endif 
   
-        board_init();
-  
-        ESP_HW_Reset();
-
-  	UART1_ReInit();
-	UART2_ReInit();
-        
-	DEBUG("\nCONCENTRATOR \"UNIVERSAL-1\"\n");
-        
+        // По кнопке применение настроек по умолчанию
         if (HAL_GPIO_ReadPin(BTN_SEND_GPIO_Port, BTN_SEND_Pin) == GPIO_PIN_RESET) {
        
             bluetooth_init();
@@ -340,6 +344,17 @@ int main(void)
             while(HAL_GPIO_ReadPin(BTN_SEND_GPIO_Port, BTN_SEND_Pin) == GPIO_PIN_RESET);
  
         }
+  
+        board_init();
+  
+        ESP_HW_Reset();
+
+  	UART1_ReInit();
+	UART2_ReInit();
+        
+	DEBUG("\nCONCENTRATOR \"UNIVERSAL-1\"\n");
+        
+        
 
   
   /* USER CODE END 2 */
@@ -360,6 +375,10 @@ int main(void)
   /* definition and creation of BinarySem_Codec_ADC_Ready */
   osSemaphoreDef(BinarySem_Codec_ADC_Ready);
   BinarySem_Codec_ADC_ReadyHandle = osSemaphoreCreate(osSemaphore(BinarySem_Codec_ADC_Ready), 1);
+
+  /* definition and creation of myBinarySem_DisplayOut */
+  osSemaphoreDef(myBinarySem_DisplayOut);
+  myBinarySem_DisplayOutHandle = osSemaphoreCreate(osSemaphore(myBinarySem_DisplayOut), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -1139,6 +1158,7 @@ static void MX_USART3_UART_Init(void)
   */
 static void MX_DMA_Init(void) 
 {
+
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
   __HAL_RCC_DMA1_CLK_ENABLE();
@@ -1263,7 +1283,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
-
   /* USER CODE BEGIN 5 */
                                                
   
@@ -1391,70 +1410,23 @@ void Start_WIFI_SEND_Routine(void const * argument)
 void Start_OLED_Out(void const * argument)
 {
   /* USER CODE BEGIN Start_OLED_Out */
-  uint8_t i;
-                ssd1306_Init();
-              //HAL_Delay(1000);
-              //ssd1306_Fill(White);
-              //ssd1306_UpdateScreen();
-
-              //HAL_Delay(1000);
-
-              ssd1306_SetCursor(5,5);
-              //ssd1306_WriteString("4ilo",Font_11x18,Black);
-              //ssd1306_WriteString("4ilo",Font_7x10,Black);
-              ssd1306_WriteString("IVA-S/W",Font_16x26,White);
+              ssd1306_Init();
+              ssd1306_Fill(Black);
+              draw_td(White);
               ssd1306_UpdateScreen();
-              
-              for (i=0;i<32;i++){
-                ssd1306_DrawPixel(0, i, White);
-                ssd1306_DrawPixel(127, i, White);
-              }
-              for (i=0;i<128;i++){
-                ssd1306_DrawPixel(i, 0, White);
-                ssd1306_DrawPixel(i, 31, White);
-              }
-              ssd1306_UpdateScreen();
+              HAL_Delay(2000);
               R.OLED_Refresh_Enable = true;
   /* Infinite loop */
   for(;;)
   {
-    if(R.OLED_Refresh_Enable){
-      
-//          HAL_I2C_DeInit(&hi2c3);
-//          HAL_I2C_Init(&hi2c3);
-          
-          ssd1306_Fill(Black);
-              
-          ssd1306_SetCursor(0,0);
-          sprintf(TmpStr, "VA=%.1f", __VOLT_PhA);
-          ssd1306_WriteString(TmpStr,Font_7x10,White);
-          
-          ssd1306_SetCursor(0,9);
-          sprintf(TmpStr, "VB=%.1f", __VOLT_PhB);
-          ssd1306_WriteString(TmpStr,Font_7x10,White);
-          
-          ssd1306_SetCursor(0,18);
-          sprintf(TmpStr, "VC=%.1f", __VOLT_PhC);
-          ssd1306_WriteString(TmpStr,Font_7x10,White);
-          
-          
-          
-          ssd1306_SetCursor(64,0);
-          sprintf(TmpStr, "CA=%.1f", __CURRENT_PhA);
-          ssd1306_WriteString(TmpStr,Font_7x10,White);
-          
-          ssd1306_SetCursor(64,9);
-          sprintf(TmpStr, "CB=%.1f", __CURRENT_PhB);
-          ssd1306_WriteString(TmpStr,Font_7x10,White);
-          
-          ssd1306_SetCursor(64,18);
-          sprintf(TmpStr, "CC=%.1f", __CURRENT_PhC);
-          ssd1306_WriteString(TmpStr,Font_7x10,White);
-          
-          ssd1306_UpdateScreen();
-      }
-      
-      osDelay(300);
+    if (R.EEPROM_in_progress == false){
+              if(R.OLED_Refresh_Enable){
+                R.OLED_Refresh_Enable = false;
+                create_screen(R.OLED_Screen);
+                ssd1306_UpdateScreen();
+              }
+    }
+    osThreadYield();
   }
   /* USER CODE END Start_OLED_Out */
 }

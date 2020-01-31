@@ -11,6 +11,9 @@
 #include "cmsis_os.h"
 #include "string.h"
 #include "meas50.h"
+#include "rxssb.h"
+#include "main.h"
+#include "display.h"
 
 //******************************************************************************
 // Секция определения констант
@@ -70,6 +73,8 @@ typedef enum {
 }
 PHASE_e;
 
+
+
 typedef struct {
   float K;
   float B;
@@ -91,7 +96,8 @@ typedef struct {
   
   //---   WiFI   ---------------------------------------------------------------
   uint32_t              CRC32;
-  char                  CompanyName[64];
+  char                  CompanyName[32];
+  char                  DeviceSerNum[32];
   
   WIFIAP_t              AP1;
   WIFIAP_t              AP2;
@@ -208,6 +214,10 @@ typedef struct {
   
   
   //---   ADC2   ---------------------------------------------------------------
+  float         Volt_Phase_A_raw;
+  float         Volt_Phase_B_raw;
+  float         Volt_Phase_C_raw;
+  
   float         Volt_Phase_A;
   float         Volt_Phase_B;
   float         Volt_Phase_C;
@@ -220,6 +230,10 @@ typedef struct {
   float         Volt_Phase_B_MIN;
   float         Volt_Phase_C_MIN;
   
+  
+  float         Current_Phase_A_raw;
+  float         Current_Phase_B_raw;
+  float         Current_Phase_C_raw;
   
   float         Current_Phase_A;
   float         Current_Phase_B;
@@ -247,7 +261,11 @@ typedef struct {
   bool                  DeviceID_OK;
   SEND_TYPE_e           ESP_PacketType_to_send;                                 // Что отправлем сейчас: Текст короткий, длиный, запрос ID, бинарник
   bool                  WiFi_Connected;                                         // Флаг для информации
-  bool                  OLED_Refresh_Enable;
+  bool                  EEPROM_in_progress;                                     // Для защиты чтения EEPROM
+  bool                  OLED_Refresh_Enable;                                    // Разрешение обновить экран
+  uint16_t              OLED_Screen_Show_Timer;                                 // Время показа экрана
+  SCREEN_e              OLED_Screen;                                            // Current screen for out to OLED display
+  char                  OLED_msg[256];                                          // Произвольное текстовое сообщение на экран
   
   uint32_t              Timer_Send_Freq;                                        // Таймер для отправки частых сообщений
   uint32_t              Timer_Send_Rare;                                        // Таймер для отправки редких сообщений
@@ -335,6 +353,8 @@ void            ADC2_DMA_XferCpltCallback               (struct __DMA_HandleType
 void            ADC2_DMA_XferHalfCpltCallback           (struct __DMA_HandleTypeDef *hdma);
 void            codec_IT_routine                        (void);
 void            clear_peak_detector_AC                  (void);
+void            create_screen                           (SCREEN_e Scr);
+void            show_OLED_message                       (char *Msg);
 
 //******************************************************************************
 // Секция определения макросов
@@ -354,30 +374,6 @@ void            clear_peak_detector_AC                  (void);
 #define __LED_SERV_ACK(PinState)  HAL_GPIO_WritePin(LED_ANSW_GPIO_Port, LED_ANSW_Pin,\
                                 ((PinState == 0)?(GPIO_PIN_SET):(GPIO_PIN_RESET)))
 
-
-#define __CURRENT_PhA           (M.Current_Phase_A     * S.Curr[PhA].K * S.Curr[PhA].R)
-#define __CURRENT_PhB           (M.Current_Phase_B     * S.Curr[PhB].K * S.Curr[PhB].R)
-#define __CURRENT_PhC           (M.Current_Phase_C     * S.Curr[PhC].K * S.Curr[PhC].R)
-
-#define __CURRENT_PhA_MAX       (M.Current_Phase_A_MAX * S.Curr[PhA].K * S.Curr[PhA].R)
-#define __CURRENT_PhB_MAX       (M.Current_Phase_B_MAX * S.Curr[PhB].K * S.Curr[PhB].R)
-#define __CURRENT_PhC_MAX       (M.Current_Phase_C_MAX * S.Curr[PhC].K * S.Curr[PhC].R)
-
-#define __CURRENT_PhA_MIN       (M.Current_Phase_A_MIN * S.Curr[PhA].K * S.Curr[PhA].R)
-#define __CURRENT_PhB_MIN       (M.Current_Phase_B_MIN * S.Curr[PhB].K * S.Curr[PhB].R)
-#define __CURRENT_PhC_MIN       (M.Current_Phase_C_MIN * S.Curr[PhC].K * S.Curr[PhC].R)
-
-#define __VOLT_PhA              (M.Volt_Phase_A        * S.Volt[PhA].K * S.Volt[PhA].R)
-#define __VOLT_PhB              (M.Volt_Phase_B        * S.Volt[PhB].K * S.Volt[PhB].R)
-#define __VOLT_PhC              (M.Volt_Phase_C        * S.Volt[PhC].K * S.Volt[PhC].R)
-
-#define __VOLT_PhA_MAX          (M.Volt_Phase_A_MAX    * S.Volt[PhA].K * S.Volt[PhA].R)
-#define __VOLT_PhB_MAX          (M.Volt_Phase_B_MAX    * S.Volt[PhB].K * S.Volt[PhB].R)
-#define __VOLT_PhC_MAX          (M.Volt_Phase_C_MAX    * S.Volt[PhC].K * S.Volt[PhC].R)
-
-#define __VOLT_PhA_MIN          (M.Volt_Phase_A_MAX    * S.Volt[PhA].K * S.Volt[PhA].R)
-#define __VOLT_PhB_MIN          (M.Volt_Phase_B_MIN    * S.Volt[PhB].K * S.Volt[PhB].R)
-#define __VOLT_PhC_MIN          (M.Volt_Phase_C_MIN    * S.Volt[PhC].K * S.Volt[PhC].R)
 
 
 #endif // Закрывающий #endif к блокировке повторного включения

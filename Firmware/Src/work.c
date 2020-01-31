@@ -107,8 +107,9 @@ HAL_StatusTypeDef status;
      
 uint16_t i;
 #define PAGE_SIZE 32
-
-    R.OLED_Refresh_Enable = false;
+    
+    //while(R.OLED_Refresh_Enable);
+    R.EEPROM_in_progress = true;
     osDelay(200);
 
 
@@ -145,7 +146,7 @@ uint16_t i;
                           2000);
     
     
-    R.OLED_Refresh_Enable = true;
+    R.EEPROM_in_progress = false;
 
 }
 
@@ -258,8 +259,9 @@ void load_default_settings_to_EEPROM (void) {
 SETTINGS_t load_settings_from_EEPROM (void){
 SETTINGS_t Out;
 HAL_StatusTypeDef status;  
-
-    R.OLED_Refresh_Enable = false;
+    
+    //while(R.OLED_Refresh_Enable);
+    R.EEPROM_in_progress = true;
     osDelay(200);
     
     
@@ -277,7 +279,7 @@ HAL_StatusTypeDef status;
                      sizeof(SETTINGS_t), 
                      2000);
     
-    R.OLED_Refresh_Enable = true;
+    R.EEPROM_in_progress = false;
  
 return Out;
 }
@@ -389,23 +391,50 @@ uint8_t i;
         if (M.Lock) return;                                                     // Если кто то читает данные, не обновляем
         
         for (i=0; i<40; i++){                                                   // Фильтрация сырых отсчетов АЦП
-          M.Volt_Phase_A    = meas_50Hz (&Meas50Ch[VOLT_A],    *(Buf + (ADC2_CH_CNT * i) + VOLT_A)); 
-          M.Volt_Phase_B    = meas_50Hz (&Meas50Ch[VOLT_B],    *(Buf + (ADC2_CH_CNT * i) + VOLT_B));
-          M.Volt_Phase_C    = meas_50Hz (&Meas50Ch[VOLT_C],    *(Buf + (ADC2_CH_CNT * i) + VOLT_C));
+          M.Volt_Phase_A_raw    = meas_50Hz (&Meas50Ch[VOLT_A],    *(Buf + (ADC2_CH_CNT * i) + VOLT_A)); 
+          M.Volt_Phase_B_raw    = meas_50Hz (&Meas50Ch[VOLT_B],    *(Buf + (ADC2_CH_CNT * i) + VOLT_B));
+          M.Volt_Phase_C_raw    = meas_50Hz (&Meas50Ch[VOLT_C],    *(Buf + (ADC2_CH_CNT * i) + VOLT_C));
           
-          min_max_peak_detect(&M.Volt_Phase_A, &M.Volt_Phase_A_MIN, &M.Volt_Phase_A_MAX);// Пиковый детектор на каждом отсчете
-          min_max_peak_detect(&M.Volt_Phase_B, &M.Volt_Phase_B_MIN, &M.Volt_Phase_B_MAX);
-          min_max_peak_detect(&M.Volt_Phase_C, &M.Volt_Phase_C_MIN, &M.Volt_Phase_C_MAX);
+          min_max_peak_detect(&M.Volt_Phase_A_raw, &M.Volt_Phase_A_MIN, &M.Volt_Phase_A_MAX);// Пиковый детектор на каждом отсчете
+          min_max_peak_detect(&M.Volt_Phase_B_raw, &M.Volt_Phase_B_MIN, &M.Volt_Phase_B_MAX);
+          min_max_peak_detect(&M.Volt_Phase_C_raw, &M.Volt_Phase_C_MIN, &M.Volt_Phase_C_MAX);
           
           
-          M.Current_Phase_A = meas_50Hz (&Meas50Ch[CURRENT_A], *(Buf + (ADC2_CH_CNT * i) + CURRENT_A));
-          M.Current_Phase_B = meas_50Hz (&Meas50Ch[CURRENT_B], *(Buf + (ADC2_CH_CNT * i) + CURRENT_B));
-          M.Current_Phase_C = meas_50Hz (&Meas50Ch[CURRENT_C], *(Buf + (ADC2_CH_CNT * i) + CURRENT_C));
+          M.Current_Phase_A_raw = meas_50Hz (&Meas50Ch[CURRENT_A], *(Buf + (ADC2_CH_CNT * i) + CURRENT_A));
+          M.Current_Phase_B_raw = meas_50Hz (&Meas50Ch[CURRENT_B], *(Buf + (ADC2_CH_CNT * i) + CURRENT_B));
+          M.Current_Phase_C_raw = meas_50Hz (&Meas50Ch[CURRENT_C], *(Buf + (ADC2_CH_CNT * i) + CURRENT_C));
           
-          min_max_peak_detect(&M.Current_Phase_A, &M.Current_Phase_A_MIN, &M.Current_Phase_A_MAX);
-          min_max_peak_detect(&M.Current_Phase_B, &M.Current_Phase_B_MIN, &M.Current_Phase_B_MAX);
-          min_max_peak_detect(&M.Current_Phase_C, &M.Current_Phase_C_MIN, &M.Current_Phase_C_MAX);
+          min_max_peak_detect(&M.Current_Phase_A_raw, &M.Current_Phase_A_MIN, &M.Current_Phase_A_MAX);
+          min_max_peak_detect(&M.Current_Phase_B_raw, &M.Current_Phase_B_MIN, &M.Current_Phase_B_MAX);
+          min_max_peak_detect(&M.Current_Phase_C_raw, &M.Current_Phase_C_MIN, &M.Current_Phase_C_MAX);
         }
+        
+        //---------------------------------------------------------------------- в Вольты
+        M.Volt_Phase_A =        (M.Volt_Phase_A_raw        * S.Volt[PhA].K * S.Volt[PhA].R);
+        M.Volt_Phase_B =        (M.Volt_Phase_B_raw        * S.Volt[PhB].K * S.Volt[PhB].R);
+        M.Volt_Phase_C =        (M.Volt_Phase_C_raw        * S.Volt[PhC].K * S.Volt[PhC].R);
+
+        M.Volt_Phase_A_MAX =    (M.Volt_Phase_A_MAX    * S.Volt[PhA].K * S.Volt[PhA].R);
+        M.Volt_Phase_B_MAX =    (M.Volt_Phase_B_MAX    * S.Volt[PhB].K * S.Volt[PhB].R);
+        M.Volt_Phase_C_MAX =    (M.Volt_Phase_C_MAX    * S.Volt[PhC].K * S.Volt[PhC].R);
+
+        M.Volt_Phase_A_MAX =    (M.Volt_Phase_A_MAX    * S.Volt[PhA].K * S.Volt[PhA].R);
+        M.Volt_Phase_A_MAX =    (M.Volt_Phase_B_MIN    * S.Volt[PhB].K * S.Volt[PhB].R);
+        M.Volt_Phase_A_MAX =    (M.Volt_Phase_C_MIN    * S.Volt[PhC].K * S.Volt[PhC].R);
+          
+        //---------------------------------------------------------------------- в Амперы  
+        M.Current_Phase_A =     (M.Current_Phase_A_raw     * S.Curr[PhA].K * S.Curr[PhA].R);
+        M.Current_Phase_B =     (M.Current_Phase_B_raw     * S.Curr[PhB].K * S.Curr[PhB].R);
+        M.Current_Phase_C =     (M.Current_Phase_C_raw     * S.Curr[PhC].K * S.Curr[PhC].R);
+
+        M.Current_Phase_A_MAX = (M.Current_Phase_A_MAX * S.Curr[PhA].K * S.Curr[PhA].R);
+        M.Current_Phase_B_MAX = (M.Current_Phase_B_MAX * S.Curr[PhB].K * S.Curr[PhB].R);
+        M.Current_Phase_C_MAX = (M.Current_Phase_C_MAX * S.Curr[PhC].K * S.Curr[PhC].R);
+
+        M.Current_Phase_A_MIN = (M.Current_Phase_A_MIN * S.Curr[PhA].K * S.Curr[PhA].R);
+        M.Current_Phase_B_MIN = (M.Current_Phase_B_MIN * S.Curr[PhB].K * S.Curr[PhB].R);
+        M.Current_Phase_C_MIN = (M.Current_Phase_C_MIN * S.Curr[PhC].K * S.Curr[PhC].R);          
+        
 }
 
 
@@ -574,7 +603,84 @@ void meas_and_send (void) {
 }
 
 
+void create_screen (SCREEN_e Scr){
+char TmpStr[64];  
+  switch (Scr){
+  case SCREEN_MEAS_ALL_CURRENT:                                                 // Токи по фазам
+    ssd1306_Fill(Black);
+        
+    ssd1306_SetCursor(0,0);
+    sprintf(TmpStr, "Tok A  %.0fA", M.Current_Phase_A);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
 
+    ssd1306_SetCursor(0,9);
+    sprintf(TmpStr, "Tok B  %.0fA", M.Current_Phase_B);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
+
+    ssd1306_SetCursor(0,18);
+    sprintf(TmpStr, "Tok C  %.0fA", M.Current_Phase_C);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
+    break;
+  //----------------------------------------------------------------------------  
+  case SCREEN_MEAS_ALL_VOLTAGE:                                                 // Напряжения по фазам
+    ssd1306_Fill(Black);
+    
+    ssd1306_SetCursor(0,0);
+    sprintf(TmpStr, "Hanp A  %.0fV", M.Volt_Phase_A);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
+
+    ssd1306_SetCursor(0,9);
+    sprintf(TmpStr, "Hanp B  %.0fV", M.Volt_Phase_B);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
+
+    ssd1306_SetCursor(0,18);
+    sprintf(TmpStr, "Hanp C  %.0fV", M.Volt_Phase_C);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
+
+    break;
+  //----------------------------------------------------------------------------
+  case SCREEN_MEAS_TEMP_0_1_2:                                                  // Температуры 0 1 2
+    ssd1306_Fill(Black);
+    
+    ssd1306_SetCursor(0,0);
+    sprintf(TmpStr, "Temn 1  %.0f*", M.AIN_0 * 100);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
+
+    ssd1306_SetCursor(0,9);
+    sprintf(TmpStr, "Temn 2  %.0f*", M.AIN_1 * 100);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
+
+    ssd1306_SetCursor(0,18);
+    sprintf(TmpStr, "Temn 3  %.0f*", M.AIN_2 * 100);
+    ssd1306_WriteString(TmpStr,Font_7x10,White);
+    break; 
+  //----------------------------------------------------------------------------
+  case SCREEN_MSG:                                                              // Текстовое сообщение
+    ssd1306_Fill(Black);
+
+    ssd1306_SetCursor(0, 0);
+    ssd1306_WriteString(R.OLED_msg, Font_7x10,White);
+
+    break;
+  }
+}
+
+
+/*
+Сообщение на ОЛЕД экран. Выводится из своего буфера в реестре, длина 256 знаков.
+Выводить так:
+Формируем сообщение в буфер.
+Сброс таймера времени показа
+Переключение экрана
+Разрешение обновления
+Сообщение будет показано стандартное время, потом опять идет смена экранов
+*/
+void show_OLED_message(char *Msg){
+  sprintf(R.OLED_msg, Msg);
+  R.OLED_Screen_Show_Timer = 0;
+  R.OLED_Screen = SCREEN_MSG;
+  R.OLED_Refresh_Enable = true;
+}
 
 
 

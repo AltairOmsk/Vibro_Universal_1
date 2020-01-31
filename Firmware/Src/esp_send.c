@@ -37,6 +37,7 @@ bool send_ACK_test (uint8_t *line) {
 //{"data":{},"errors":[],"success":true}0,CLOSED
       if (strstr((char *)line, "\"success\":true")){
                                 __LED_SERV_ACK(1);
+                                show_OLED_message("Success");
                                 return true;
                           } 
 return false;      
@@ -52,6 +53,7 @@ bool get_DevID_cb (uint8_t *line) {
                                 DEBUG("\nDevice ID: ");
                                 DEBUG((char*)R.DeviceID);
                                 DEBUG("\n");
+                                show_OLED_message("ID received");
                                 R.DeviceID_OK = true;
                                 R.ESP_PacketType_to_send = TXT_FREQ;
                                 M.ESP_MsgCnt++;
@@ -75,14 +77,16 @@ return false - error
 bool server_connect (void){
                                                                                 // Попытка 1
   DEBUG("Try to connect 1\n");                                                  // Соединяемся. Если да - выходим с 1
+  show_OLED_message("Try to connect 1");
   SendCmd("AT+CIPMUX=0\r\n");     
   SendCmd("AT+CIPMODE=0\r\n");
   sprintf(TmpStr,"AT+CIPSTART=\"TCP\",\"%s\",%d\r\n", S.Srv1.Domain, S.Srv1.Port);
                   //sprintf(TmpStr,"AT+CIPSTART=\"TCP\",\"192.168.1.158\",8123\r\n");
   if (SendCmd(TmpStr) == 0) {
+    show_OLED_message("Connected");
     return true;
   }
-
+  show_OLED_message("Failed");
                                                                                 // Попытка 2
                                                                                 // Делаем рассоединение принудительное
   DEBUG("Try to connect 2\n");                                                  // Соединяемся. Если да - выходим с 1
@@ -100,13 +104,19 @@ bool server_connect (void){
                                                                                 // Подкрючение к АР
                                                                                 // Соединяемся. Если да, выходим с 1
                                                                                 // Если не удалось - выходим с 0 
-  DEBUG("Try to connect 3\n");
+  DEBUG("Try to connect 3 with HW RESET WIFI module\n");
+  
+  R.DeviceID_OK = false;                                                        // Отмена регистрации на сервере
+  __LED_NET(0);                                                                 // Гасим светодиод соединения с сервером
+  R.WiFi_Connected = false;                                                     // Снимаем флаг соединения с wifi
+  
   __WIFI_RESET  (0);                                                            // ESP HW reset
   HAL_Delay(20);
   __WIFI_RESET  (1);
   HAL_Delay(2000);
   
-  R.DeviceID_OK = false;                                                        // Отмена регистрации на сервере
+  
+  DEBUG("WIFI Init\n");
   
   while (!ESP_Init()){                                                          // Запуск ESP8266
         DEBUG("ESP init failure\n");
@@ -297,13 +307,13 @@ void send_DC (void){
     strcat((char*)POST_Body, "],");
     strcat((char*)POST_Body, "\"inputs\":[");
   
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_A", "voltage", __VOLT_PhA, "V"); strcat((char*)POST_Body, ",");
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_B", "voltage", __VOLT_PhB, "V"); strcat((char*)POST_Body, ",");
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_C", "voltage", __VOLT_PhC, "V"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_A", "voltage", M.Volt_Phase_A, "V"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_B", "voltage", M.Volt_Phase_B, "V"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_C", "voltage", M.Volt_Phase_C, "V"); strcat((char*)POST_Body, ",");
     
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_A", "current", __CURRENT_PhA, "A"); strcat((char*)POST_Body, ",");
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_B", "current", __CURRENT_PhB, "A"); strcat((char*)POST_Body, ",");
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_C", "current", __CURRENT_PhC, "A"); 
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_A", "current", M.Current_Phase_A, "A"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_B", "current", M.Current_Phase_B, "A"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_C", "current", M.Current_Phase_C, "A"); 
     
     strcat((char*)POST_Body, "]}}");
    
@@ -380,13 +390,13 @@ void send_bin (uint16_t *Buf, uint32_t Len_byte){
     strcat((char*)POST_Body, "],");
     strcat((char*)POST_Body, "\"inputs\":[");
   
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_A", "voltage", __VOLT_PhA, "V"); strcat((char*)POST_Body, ",");
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_B", "voltage", __VOLT_PhB, "V"); strcat((char*)POST_Body, ",");
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_C", "voltage", __VOLT_PhC, "V"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_A", "voltage", M.Volt_Phase_A, "V"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_B", "voltage", M.Volt_Phase_B, "V"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "VOLT_C", "voltage", M.Volt_Phase_C, "V"); strcat((char*)POST_Body, ",");
     
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_A", "current", __CURRENT_PhA, "A"); strcat((char*)POST_Body, ",");
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_B", "current", __CURRENT_PhB, "A"); strcat((char*)POST_Body, ",");
-    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_C", "current", __CURRENT_PhC, "A"); 
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_A", "current", M.Current_Phase_A, "A"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_B", "current", M.Current_Phase_B, "A"); strcat((char*)POST_Body, ",");
+    add_json_ext_inlet (POST_Body, "AC_ANALOG_INPUT", "CURRENT_C", "current", M.Current_Phase_C, "A"); 
     
     strcat((char*)POST_Body, "]}}");
     
