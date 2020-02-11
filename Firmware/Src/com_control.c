@@ -501,13 +501,13 @@ void BT_ParseCommand (char *Line){
   Ptr=strstr(Line, "AT+SETSN=");                                            
   if (Ptr){
     Ptr +=strlen("AT+SETSN=");
-    for (i=0;i<12;i++) { Tmp_buf[i]=0; } 
+    for (i=0;i<33;i++) { Tmp_buf[i]=0; } 
     
-    ii=0; Ptr++; Ptr++;                                                         // ѕереход на строку номера
+    ii=0;                                                        
     while (*Ptr != '\r'){                                                       // »щем до конца строки
         if (ii>30) { break; }
         *(S.DeviceSerNum + ii) = *Ptr;   Ptr++;   ii++;                         //  опируем строку                   
-        if (*(Ptr) == '\r') *(S.AP1.Pass + ii) = '\0';                          // явно обозначаем коней строки             
+        if (*(Ptr) == '\r') *(S.DeviceSerNum + ii) = '\0';                          // явно обозначаем коней строки             
     }
     save_settings_to_EEPROM(&S);
     sprintf (Tmp_buf, "\n+SETSN=%s\n", S.DeviceSerNum);
@@ -531,7 +531,7 @@ static void NetStatus_Send (void){
   DEBUG(Tmp_buf);
   sprintf(Tmp_buf, "FW Version %s\r\n", FIRMWARE_REV);
   DEBUG(Tmp_buf);
-  sprintf(Tmp_buf, "DivID: %s\r\n", R.DeviceID);
+  sprintf(Tmp_buf, "Device Ser Num: %s\r\n", S.DeviceSerNum);
   DEBUG(Tmp_buf);
   
   sprintf(Tmp_buf, "AP1: SSID=%s, Pass=%s\r\n", S.AP1.SSID, S.AP1.Pass);

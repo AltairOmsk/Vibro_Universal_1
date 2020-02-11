@@ -256,9 +256,7 @@ MEAS_t;
 
 
 typedef struct {
-  
-  uint8_t               DeviceID[50];                                           // Для ID который выдаст сервер
-  bool                  DeviceID_OK;
+
   SEND_TYPE_e           ESP_PacketType_to_send;                                 // Что отправлем сейчас: Текст короткий, длиный, запрос ID, бинарник
   bool                  WiFi_Connected;                                         // Флаг для информации
   bool                  EEPROM_in_progress;                                     // Для защиты чтения EEPROM

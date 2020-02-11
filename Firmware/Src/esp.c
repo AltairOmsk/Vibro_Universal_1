@@ -976,11 +976,11 @@ bool get_DevID (uint8_t *line) {
 
 //{"data":{"deviceID":"d41ff596-ee5d-494f-992f-c90deb30909a"},"errors":[],"success":true}0,CLOSED
       if (strstr((char *)line, "{\"data\":{\"deviceID\":\"")){
-                                memcpy(R.DeviceID, (char *)line+21, 36);
+                                //memcpy(R.DeviceID, (char *)line+21, 36);
                                 //*((char *)line + 21 + 36) = 0;
                                 __LED_SERV_ACK(1);
                                 DEBUG("\nDevice ID: ");
-                                DEBUG((char*)R.DeviceID);
+                                //DEBUG((char*)R.DeviceID);
                                 DEBUG("\n");
                                 R.ESP_PacketType_to_send = TXT_FREQ;
                                 M.ESP_MsgCnt++;

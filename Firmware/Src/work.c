@@ -157,6 +157,8 @@ uint16_t i;
 void load_default_settings_to_EEPROM (void) {
   SETTINGS_t Out = {
       .CompanyName         = "1",
+      
+      .DeviceSerNum        = "XXXX-XX-XX-XX-XXXX",
     
       .AP1.SSID            = "HiTech_2G",
       .AP1.Pass            = "Crocodile102017",

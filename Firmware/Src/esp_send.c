@@ -47,14 +47,14 @@ bool get_DevID_cb (uint8_t *line) {
 
 //{"data":{"deviceID":"d41ff596-ee5d-494f-992f-c90deb30909a"},"errors":[],"success":true}0,CLOSED
       if (strstr((char *)line, "{\"data\":{\"deviceID\":\"")){
-                                memcpy(R.DeviceID, (char *)line+21, 36);
+                                //memcpy(R.DeviceID, (char *)line+21, 36);
                                 //*((char *)line + 21 + 36) = 0;
                                 __LED_SERV_ACK(1);
                                 DEBUG("\nDevice ID: ");
-                                DEBUG((char*)R.DeviceID);
+                                //DEBUG((char*)R.DeviceID);
                                 DEBUG("\n");
                                 show_OLED_message("ID received");
-                                R.DeviceID_OK = true;
+                                //R.DeviceID_OK = true;
                                 R.ESP_PacketType_to_send = TXT_FREQ;
                                 M.ESP_MsgCnt++;
                                 return true;
@@ -105,8 +105,7 @@ bool server_connect (void){
                                                                                 // Соединяемся. Если да, выходим с 1
                                                                                 // Если не удалось - выходим с 0 
   DEBUG("Try to connect 3 with HW RESET WIFI module\n");
-  
-  R.DeviceID_OK = false;                                                        // Отмена регистрации на сервере
+
   __LED_NET(0);                                                                 // Гасим светодиод соединения с сервером
   R.WiFi_Connected = false;                                                     // Снимаем флаг соединения с wifi
   
@@ -220,14 +219,14 @@ void send_AC(void){
           "{"\
             "\"messageMapId\":\"post-device-data\","\
             "\"data\":{"\
-                "\"deviceId\":\"%s\","\
+                "\"inventoryNumber\":\"%s\","\
                 "\"hardwareRevision\":\"%s\","\
                 "\"firmwareVersion\":\"%s\","\
                 "\"messageSentReason\":\"%s\","\
                 "\"messageNumber\":%ld,"\
                 "\"upTime\":%ld,"\
                 "\"upTimeUnit\":\"s\",",\
-          R.DeviceID, HARDWARE_REV, FIRMWARE_REV, "time", M.ESP_MsgCnt, M.UpTime
+          S.DeviceSerNum, HARDWARE_REV, FIRMWARE_REV, "time", M.ESP_MsgCnt, M.UpTime
        );
     
     strcat((char*)POST_Body, "\"onBoard\":[");
@@ -290,14 +289,14 @@ void send_DC (void){
           "{"\
             "\"messageMapId\":\"post-device-data\","\
             "\"data\":{"\
-                "\"deviceId\":\"%s\","\
+                "\"inventoryNumber\":\"%s\","\
                 "\"hardwareRevision\":\"%s\","\
                 "\"firmwareVersion\":\"%s\","\
                 "\"messageSentReason\":\"%s\","\
                 "\"messageNumber\":%ld,"\
                 "\"upTime\":%ld,"\
                 "\"upTimeUnit\":\"s\",",\
-          R.DeviceID, HARDWARE_REV, FIRMWARE_REV, "time", M.ESP_MsgCnt, M.UpTime
+          S.DeviceSerNum, HARDWARE_REV, FIRMWARE_REV, "time", M.ESP_MsgCnt, M.UpTime
        );
     
     strcat((char*)POST_Body, "\"onBoard\":[");
@@ -373,14 +372,14 @@ void send_bin (uint16_t *Buf, uint32_t Len_byte){
           "{"\
             "\"messageMapId\":\"post-device-data\","\
             "\"data\":{"\
-                "\"deviceId\":\"%s\","\
+                "\"inventoryNumber\":\"%s\","\
                 "\"hardwareRevision\":\"%s\","\
                 "\"firmwareVersion\":\"%s\","\
                 "\"messageSentReason\":\"%s\","\
                 "\"messageNumber\":%ld,"\
                 "\"upTime\":%ld,"\
                 "\"upTimeUnit\":\"s\",",\
-          R.DeviceID, HARDWARE_REV, FIRMWARE_REV, "time", M.ESP_MsgCnt, M.UpTime
+          S.DeviceSerNum, HARDWARE_REV, FIRMWARE_REV, "time", M.ESP_MsgCnt, M.UpTime
        );
     
     strcat((char*)POST_Body, "\"onBoard\":[");
@@ -562,33 +561,23 @@ void all_data_send (void){}
 //******************************************************************************
 void ESP_Send_Packet (void) {
   
-  if (R.DeviceID_OK == true) {
+
+      if (R.Timer_Send_Freq == 0) {                                       // Частая отправка (дискретные измерения)
+        R.Timer_Send_Freq = S.Interval_Send_Freq;
+        txt_freq_send();
+      }
+      
+      if (R.Timer_Send_Rare == 0) {                                       // Редкая отправка (буфер 80 кБ)
+        R.Timer_Send_Rare = S.Interval_Send_Rare;
+        //bin_rare_send((uint8_t*)BigBuf, 0, SRC_fd48kHz_16bit);
+      }
+      
+      if (R.Button_Send_Flag == true){                                    // Отправка всего по кнопке
+        R.Button_Send_Flag = false;
+        //txt_freq_send();
+        bin_rare_send((uint8_t*)BigBuf, 0, SRC_fd48kHz_16bit);
+      }
     
-    
-    
-            if (R.Timer_Send_Freq == 0) {                                       // Частая отправка (дискретные измерения)
-              R.Timer_Send_Freq = S.Interval_Send_Freq;
-              txt_freq_send();
-            }
-            
-            if (R.Timer_Send_Rare == 0) {                                       // Редкая отправка (буфер 80 кБ)
-              R.Timer_Send_Rare = S.Interval_Send_Rare;
-              //bin_rare_send((uint8_t*)BigBuf, 0, SRC_fd48kHz_16bit);
-            }
-            
-            if (R.Button_Send_Flag == true){                                    // Отправка всего по кнопке
-              R.Button_Send_Flag = false;
-              //txt_freq_send();
-              bin_rare_send((uint8_t*)BigBuf, 0, SRC_fd48kHz_16bit);
-            }
-    
-    
-    
-  } else {
-    get_DevID_from_server();
-  }
-  
-  
   
   
 
